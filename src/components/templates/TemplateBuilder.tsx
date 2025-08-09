@@ -77,6 +77,13 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
     initial?.examples?.headerTextValues ?? Array(headerVariableNumbers.length).fill("")
   )
 
+  const [bodyVarKeys, setBodyVarKeys] = React.useState<{ number: string; key: string }[]>(
+    initial?.variableMap?.body ?? variableNumbers.map((n) => ({ number: n, key: "" }))
+  )
+  const [headerVarKeys, setHeaderVarKeys] = React.useState<{ number: string; key: string }[]>(
+    initial?.variableMap?.header ?? headerVariableNumbers.map((n) => ({ number: n, key: "" }))
+  )
+
   React.useEffect(() => {
     setBodyExampleSets((prev) => {
       const ensureLen = (arr: string[]) => {
@@ -94,6 +101,20 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
       const next = Array(headerVariableNumbers.length).fill("") as string[]
       for (let i = 0; i < Math.min(prev.length, next.length); i++) next[i] = prev[i]
       return next
+    })
+  }, [headerVariableNumbers])
+
+  React.useEffect(() => {
+    setBodyVarKeys((prev) => {
+      const map = new Map(prev.map((v) => [v.number, v.key]))
+      return variableNumbers.map((n) => ({ number: n, key: map.get(n) ?? "" }))
+    })
+  }, [variableNumbers])
+
+  React.useEffect(() => {
+    setHeaderVarKeys((prev) => {
+      const map = new Map(prev.map((v) => [v.number, v.key]))
+      return headerVariableNumbers.map((n) => ({ number: n, key: map.get(n) ?? "" }))
     })
   }, [headerVariableNumbers])
   React.useEffect(() => {
@@ -165,6 +186,10 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
       examples: {
         bodyTextSets: bodyExampleSets,
         headerTextValues: headerType === "TEXT" && headerVariableNumbers.length ? headerExampleValues : undefined,
+      },
+      variableMap: {
+        body: bodyVarKeys,
+        header: headerType === "TEXT" && headerVariableNumbers.length ? headerVarKeys : undefined,
       },
     }
     onSave(model)
@@ -306,6 +331,49 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Nomes de variáveis (disparo) */}
+            <div className="space-y-3">
+              <Label>Nomes de variáveis (disparo pelo app)</Label>
+              {variableNumbers.length > 0 && (
+                <div className="space-y-2 rounded-md border p-3">
+                  <div className="font-medium">Corpo – nomeie cada variável</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {bodyVarKeys.map((v, idx) => (
+                      <Input
+                        key={v.number}
+                        value={v.key}
+                        onChange={(e) => setBodyVarKeys((prev) => {
+                          const copy = [...prev]
+                          copy[idx] = { ...copy[idx], key: e.target.value }
+                          return copy
+                        })}
+                        placeholder={`{{${v.number}}} • ex.: nome`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {headerType === "TEXT" && headerVariableNumbers.length > 0 && (
+                <div className="space-y-2 rounded-md border p-3">
+                  <div className="font-medium">Cabeçalho – nomeie cada variável</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {headerVarKeys.map((v, idx) => (
+                      <Input
+                        key={v.number}
+                        value={v.key}
+                        onChange={(e) => setHeaderVarKeys((prev) => {
+                          const copy = [...prev]
+                          copy[idx] = { ...copy[idx], key: e.target.value }
+                          return copy
+                        })}
+                        placeholder={`{{${v.number}}} • ex.: cupom`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Exemplos para publicação */}

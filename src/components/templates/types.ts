@@ -33,6 +33,12 @@ export interface TemplateExamples {
   headerTextValues?: string[]
 }
 
+export interface TemplateVariableMap {
+  // Nomes lógicos que o app usará na hora do disparo (ex.: nome, pedido_id)
+  body: { number: string; key: string }[]
+  header?: { number: string; key: string }[]
+}
+
 export interface TemplateModel {
   id: string
   name: string
@@ -48,6 +54,7 @@ export interface TemplateModel {
   updatedAt: string
   wabaStatuses: WABAStatus[]
   examples?: TemplateExamples
+  variableMap?: TemplateVariableMap
 }
 
 
