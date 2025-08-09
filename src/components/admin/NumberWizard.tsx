@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import type { ExtendedNumber } from "./NumbersIntegration";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 
 // Tipos auxiliares
 type Provider = "meta" | "infobip" | "gupshup";
@@ -25,6 +27,17 @@ const POOLS = ["Pool Marketing BR", "Pool Transacional BR", "Pool Global LATAM"]
 
 export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps) {
   const { toast } = useToast();
+
+  const HelpHint = ({ text }: { text: string }) => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" className="inline-flex items-center text-muted-foreground hover:text-foreground" aria-label="Ajuda">
+          <HelpCircle className="h-4 w-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs whitespace-pre-line">{text}</TooltipContent>
+    </Tooltip>
+  );
 
   // Passo 1 — comum
   const [label, setLabel] = React.useState("");
@@ -161,6 +174,7 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setStep(1); } }}>
       <DialogContent className="max-w-3xl">
+        <TooltipProvider>
         <DialogHeader>
           <DialogTitle>Novo número · Wizard (3 passos)</DialogTitle>
         </DialogHeader>
@@ -180,15 +194,24 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
         {step === 1 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
             <div>
-              <Label>Label (3–40)</Label>
+              <div className="flex items-center gap-1">
+                <Label>Label (3–40)</Label>
+                <HelpHint text="Apelido exibido no console. 3–40 caracteres. Ex.: Sender-01 BR." />
+              </div>
               <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Sender-01 BR" />
             </div>
             <div>
-              <Label>Número (E.164)</Label>
+              <div className="flex items-center gap-1">
+                <Label>Número (E.164)</Label>
+                <HelpHint text="Número completo no formato E.164. Ex.: +5511998765432. Sem espaços, parênteses ou traços." />
+              </div>
               <Input value={phoneE164} onChange={(e) => setPhoneE164(e.target.value.replace(/[^+\d]/g, ""))} placeholder="+5511998765432" />
             </div>
             <div>
-              <Label>Provedor/BSP</Label>
+              <div className="flex items-center gap-1">
+                <Label>Provedor/BSP</Label>
+                <HelpHint text="Selecione o provedor de envio: Meta Cloud, Infobip ou Gupshup." />
+              </div>
               <Select value={provider} onValueChange={(v: Provider) => setProvider(v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -199,7 +222,10 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
               </Select>
             </div>
             <div>
-              <Label>Uso preferencial</Label>
+              <div className="flex items-center gap-1">
+                <Label>Uso preferencial</Label>
+                <HelpHint text="Ajuda no roteamento. Opcional: Marketing, Transacional ou Ambos." />
+              </div>
               <Select value={usage} onValueChange={(v: any) => setUsage(v)}>
                 <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                 <SelectContent>
@@ -210,11 +236,17 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
               </Select>
             </div>
             <div>
-              <Label>TPS alvo (≥ 1)</Label>
+              <div className="flex items-center gap-1">
+                <Label>TPS alvo (≥ 1)</Label>
+                <HelpHint text="Mensagens por segundo desejadas (≥ 1). Usado pelo scheduler/quota." />
+              </div>
               <Input type="number" value={tps} min={1} onChange={(e) => setTps(Math.max(1, Number(e.target.value || 1)))} />
             </div>
             <div className="md:col-span-2">
-              <Label>Entrar neste Pool</Label>
+              <div className="flex items-center gap-1">
+                <Label>Entrar neste Pool</Label>
+                <HelpHint text="Opcional: inclua o número em Pools (ex.: Pool Marketing BR) para roteamento/failover." />
+              </div>
               <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {POOLS.map((p) => (
                   <button
@@ -231,11 +263,14 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
             </div>
             <div className="flex items-center gap-2 md:col-span-2">
               <Switch checked={canFallback} onCheckedChange={setCanFallback} />
-              <span>Marcar como “pode ser fallback”</span>
+              <span>Marcar como “pode ser fallback”</span><HelpHint text="Se ativo, este número pode ser usado como fallback quando outro falhar." />
             </div>
 
             <div className="md:col-span-2">
-              <Label className="text-xs text-muted-foreground">Rascunho enviado ao backend (simulado)</Label>
+              <div className="flex items-center gap-1">
+                <Label className="text-xs text-muted-foreground">Rascunho enviado ao backend (simulado)</Label>
+                <HelpHint text="Exemplo do payload parcial enviado ao backend ao final do Passo 1." />
+              </div>
               <pre className="mt-1 rounded-md bg-muted p-3 text-xs overflow-auto">
 {JSON.stringify({
   label,
@@ -261,12 +296,12 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
 
               <TabsContent value="meta" className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div><Label>WABA ID</Label><Input value={meta.waba_id} onChange={(e) => setMeta({ ...meta, waba_id: e.target.value })} placeholder="123456789012345" /></div>
-                  <div><Label>Phone Number ID</Label><Input value={meta.phone_number_id} onChange={(e) => setMeta({ ...meta, phone_number_id: e.target.value })} placeholder="987654321098765" /></div>
-                  <div className="md:col-span-2"><Label>Access Token</Label><Input value={meta.access_token} onChange={(e) => setMeta({ ...meta, access_token: e.target.value })} placeholder="EAAG..." /></div>
-                  <div><Label>Graph API Version</Label><Input value={meta.graph_version} onChange={(e) => setMeta({ ...meta, graph_version: e.target.value })} placeholder="v19.0" /></div>
-                  <div><Label>App ID (opcional)</Label><Input value={meta.app_id} onChange={(e) => setMeta({ ...meta, app_id: e.target.value })} placeholder="1234567890" /></div>
-                  <div className="md:col-span-2"><Label>Webhook Verify Token</Label><Input value={meta.webhook_verify_token} onChange={(e) => setMeta({ ...meta, webhook_verify_token: e.target.value })} placeholder="minha-chave-webhook" /></div>
+                  <div><div className="flex items-center gap-1"><Label>WABA ID</Label><HelpHint text="ID da WhatsApp Business Account (12–16 dígitos). Encontre no Meta Business Manager > Business Settings > WhatsApp Accounts." /></div><Input value={meta.waba_id} onChange={(e) => setMeta({ ...meta, waba_id: e.target.value })} placeholder="123456789012345" /></div>
+                  <div><div className="flex items-center gap-1"><Label>Phone Number ID</Label><HelpHint text="ID do número na Graph API. Veja em WhatsApp Manager (Detalhes do número) ou via Graph Explorer." /></div><Input value={meta.phone_number_id} onChange={(e) => setMeta({ ...meta, phone_number_id: e.target.value })} placeholder="987654321098765" /></div>
+                  <div className="md:col-span-2"><div className="flex items-center gap-1"><Label>Access Token</Label><HelpHint text="Token (System User/long-lived) com escopos whatsapp_business_messaging e whatsapp_business_management." /></div><Input value={meta.access_token} onChange={(e) => setMeta({ ...meta, access_token: e.target.value })} placeholder="EAAG..." /></div>
+                  <div><div className="flex items-center gap-1"><Label>Graph API Version</Label><HelpHint text="Versão da Graph API usada nas chamadas (ex.: v19.0)." /></div><Input value={meta.graph_version} onChange={(e) => setMeta({ ...meta, graph_version: e.target.value })} placeholder="v19.0" /></div>
+                  <div><div className="flex items-center gap-1"><Label>App ID (opcional)</Label><HelpHint text="ID do App Meta (útil para diagnóstico)." /></div><Input value={meta.app_id} onChange={(e) => setMeta({ ...meta, app_id: e.target.value })} placeholder="1234567890" /></div>
+                  <div className="md:col-span-2"><div className="flex items-center gap-1"><Label>Webhook Verify Token</Label><HelpHint text="Chave usada para validar a assinatura do webhook quando o backend receber eventos." /></div><Input value={meta.webhook_verify_token} onChange={(e) => setMeta({ ...meta, webhook_verify_token: e.target.value })} placeholder="minha-chave-webhook" /></div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -278,11 +313,11 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
 
               <TabsContent value="infobip" className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="md:col-span-2"><Label>Base URL</Label><Input value={infobip.base_url} onChange={(e) => setInfobip({ ...infobip, base_url: e.target.value })} placeholder="https://XYZ123.api.infobip.com" /></div>
-                  <div className="md:col-span-2"><Label>API Key</Label><Input value={infobip.api_key} onChange={(e) => setInfobip({ ...infobip, api_key: e.target.value })} placeholder="abcdef123456..." /></div>
-                  <div><Label>From (número)</Label><Input value={infobip.from} onChange={(e) => setInfobip({ ...infobip, from: e.target.value.replace(/\D/g, "") })} placeholder="5511998765432" /></div>
-                  <div><Label>DLR Secret (opcional)</Label><Input value={infobip.dlr_secret} onChange={(e) => setInfobip({ ...infobip, dlr_secret: e.target.value })} placeholder="opcional" /></div>
-                  <div><Label>Inbound Secret (opcional)</Label><Input value={infobip.inbound_secret} onChange={(e) => setInfobip({ ...infobip, inbound_secret: e.target.value })} placeholder="opcional" /></div>
+                  <div className="md:col-span-2"><div className="flex items-center gap-1"><Label>Base URL</Label><HelpHint text="URL da sua instância: https://<cluster>.api.infobip.com." /></div><Input value={infobip.base_url} onChange={(e) => setInfobip({ ...infobip, base_url: e.target.value })} placeholder="https://XYZ123.api.infobip.com" /></div>
+                  <div className="md:col-span-2"><div className="flex items-center gap-1"><Label>API Key</Label><HelpHint text="Chave do portal Infobip (Applications). 32–64 caracteres. Header: Authorization: App <key>." /></div><Input value={infobip.api_key} onChange={(e) => setInfobip({ ...infobip, api_key: e.target.value })} placeholder="abcdef123456..." /></div>
+                  <div><div className="flex items-center gap-1"><Label>From (número)</Label><HelpHint text="Remetente sem +, 10–15 dígitos (ex.: 5511998765432)." /></div><Input value={infobip.from} onChange={(e) => setInfobip({ ...infobip, from: e.target.value.replace(/\D/g, "") })} placeholder="5511998765432" /></div>
+                  <div><div className="flex items-center gap-1"><Label>DLR Secret (opcional)</Label><HelpHint text="Opcional. Segredo para validar assinaturas de DLR." /></div><Input value={infobip.dlr_secret} onChange={(e) => setInfobip({ ...infobip, dlr_secret: e.target.value })} placeholder="opcional" /></div>
+                  <div><div className="flex items-center gap-1"><Label>Inbound Secret (opcional)</Label><HelpHint text="Opcional. Segredo para validar mensagens recebidas." /></div><Input value={infobip.inbound_secret} onChange={(e) => setInfobip({ ...infobip, inbound_secret: e.target.value })} placeholder="opcional" /></div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={testConnection}>Testar conexão</Button>
@@ -292,11 +327,15 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
 
               <TabsContent value="gupshup" className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="md:col-span-2"><Label>API Key</Label><Input value={gupshup.api_key} onChange={(e) => setGupshup({ ...gupshup, api_key: e.target.value })} placeholder="api_xxx" /></div>
-                  <div><Label>App</Label><Input value={gupshup.app} onChange={(e) => setGupshup({ ...gupshup, app: e.target.value })} placeholder="meu_app_whatsapp" /></div>
-                  <div><Label>Source (número)</Label><Input value={gupshup.source} onChange={(e) => setGupshup({ ...gupshup, source: e.target.value.replace(/\D/g, "") })} placeholder="5511998765432" /></div>
-                  <div><Label>Callback Secret (opcional)</Label><Input value={gupshup.callback_secret} onChange={(e) => setGupshup({ ...gupshup, callback_secret: e.target.value })} placeholder="opcional" /></div>
-                  <div><Label>Ambiente</Label>
+                  <div className="md:col-span-2"><div className="flex items-center gap-1"><Label>API Key</Label><HelpHint text="Chave da conta. Usada no header 'apikey'." /></div><Input value={gupshup.api_key} onChange={(e) => setGupshup({ ...gupshup, api_key: e.target.value })} placeholder="api_xxx" /></div>
+                  <div><div className="flex items-center gap-1"><Label>App</Label><HelpHint text="Nome/ID do app WhatsApp na sua conta." /></div><Input value={gupshup.app} onChange={(e) => setGupshup({ ...gupshup, app: e.target.value })} placeholder="meu_app_whatsapp" /></div>
+                  <div><div className="flex items-center gap-1"><Label>Source (número)</Label><HelpHint text="Número remetente sem +, 10–15 dígitos." /></div><Input value={gupshup.source} onChange={(e) => setGupshup({ ...gupshup, source: e.target.value.replace(/\D/g, "") })} placeholder="5511998765432" /></div>
+                  <div><div className="flex items-center gap-1"><Label>Callback Secret (opcional)</Label><HelpHint text="Opcional. Segredo para validar callbacks." /></div><Input value={gupshup.callback_secret} onChange={(e) => setGupshup({ ...gupshup, callback_secret: e.target.value })} placeholder="opcional" /></div>
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <Label>Ambiente</Label>
+                      <HelpHint text="Selecione Live ou Sandbox conforme o app." />
+                    </div>
                     <Select value={gupshup.environment} onValueChange={(v: any) => setGupshup({ ...gupshup, environment: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -381,6 +420,7 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
             )}
           </div>
         </DialogFooter>
+        </TooltipProvider>
       </DialogContent>
     </Dialog>
   );
