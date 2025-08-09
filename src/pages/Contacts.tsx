@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, Upload, Download, Users, Filter, Plus } from "lucide-react"
+import { Search, Upload, Download, Users, Filter, Plus, Shield } from "lucide-react"
+import { NumberValidation } from "@/components/contacts/NumberValidation"
 
 const Contacts = () => {
   const lists = [
@@ -233,6 +234,13 @@ const Contacts = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Number Validation Section */}
+        <NumberValidation 
+          listId="list-1" 
+          totalContacts={39226}
+          onValidationComplete={(results) => console.log("Validation results:", results)}
+        />
       </div>
     </AppLayout>
   )
