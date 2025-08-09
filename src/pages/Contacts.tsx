@@ -3,10 +3,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, Upload, Download, Users, Filter, Plus, Shield } from "lucide-react"
+import { Search, Upload, Download, Users, Filter, Plus, Shield, Tags } from "lucide-react"
 import { NumberValidation } from "@/components/contacts/NumberValidation"
+import { TagManager } from "@/components/contacts/TagManager"
+import { ContactTagging } from "@/components/contacts/ContactTagging"
+import { useState } from "react"
 
 const Contacts = () => {
+  const [tags, setTags] = useState([]);
   const lists = [
     {
       id: 1,
@@ -233,6 +237,17 @@ const Contacts = () => {
               ))}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Tag Management */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TagManager onTagsChange={setTags} />
+          <ContactTagging 
+            tags={tags} 
+            onContactUpdate={(contactId, newTags) => 
+              console.log(`Contact ${contactId} updated with tags:`, newTags)
+            } 
+          />
         </div>
 
         {/* Number Validation Section */}
