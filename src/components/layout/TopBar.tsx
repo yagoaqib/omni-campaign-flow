@@ -1,4 +1,4 @@
-import { Search, Bell, ChevronDown, Plus } from "lucide-react"
+import { Search, Bell, ChevronDown, Plus, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -12,11 +12,18 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Link } from "react-router-dom"
+import { useState } from "react"
 
 const workspaces = [
-  { id: "1", name: "Produção", status: "active" },
-  { id: "2", name: "Staging", status: "idle" },
-  { id: "3", name: "Desenvolvimento", status: "active" },
+  { id: "1", name: "Cliente A", status: "online" },
+  { id: "2", name: "Cliente B", status: "online" },
+  { id: "3", name: "Cliente C", status: "offline" },
+]
+
+const alerts = [
+  { id: 1, type: "quality", message: "Quality drop em WABA-01", workspace: "Cliente A", time: "2 min" },
+  { id: 2, type: "tier", message: "Tier 90% atingido WABA-02", workspace: "Cliente B", time: "5 min" },
+  { id: 3, type: "429", message: "429 burst detectado", workspace: "Cliente A", time: "8 min" },
 ]
 
 export function TopBar() {
@@ -31,7 +38,7 @@ export function TopBar() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="h-9 px-3 gap-2">
               <div className="w-2 h-2 bg-success rounded-full"></div>
-              <span className="font-medium">Produção</span>
+              <span className="font-medium">Cliente A</span>
               <ChevronDown className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -41,10 +48,10 @@ export function TopBar() {
             {workspaces.map((workspace) => (
               <DropdownMenuItem key={workspace.id} className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${
-                  workspace.status === 'active' ? 'bg-success' : 'bg-muted-foreground'
+                  workspace.status === 'online' ? 'bg-success' : 'bg-muted-foreground'
                 }`}></div>
                 <span>{workspace.name}</span>
-                {workspace.name === "Produção" && (
+                {workspace.name === "Cliente A" && (
                   <Badge variant="secondary" className="ml-auto text-xs">Atual</Badge>
                 )}
               </DropdownMenuItem>
@@ -91,12 +98,36 @@ export function TopBar() {
         </Button>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
-          <Bell className="w-4 h-4" />
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full flex items-center justify-center">
-            <span className="text-[10px] text-destructive-foreground font-medium">3</span>
-          </div>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
+              <Bell className="w-4 h-4" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full flex items-center justify-center">
+                <span className="text-[10px] text-destructive-foreground font-medium">{alerts.length}</span>
+              </div>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuLabel>Alertas Recentes</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {alerts.map((alert) => (
+              <DropdownMenuItem key={alert.id} className="flex flex-col items-start gap-1 py-3">
+                <div className="flex items-center gap-2 w-full">
+                  <AlertTriangle className={`w-4 h-4 ${
+                    alert.type === '429' ? 'text-destructive' : 
+                    alert.type === 'tier' ? 'text-warning' : 'text-muted-foreground'
+                  }`} />
+                  <span className="font-medium text-sm">{alert.message}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">{alert.time}</span>
+                </div>
+                <span className="text-xs text-muted-foreground pl-6">{alert.workspace}</span>
+              </DropdownMenuItem>
+            ))}
+            {alerts.length === 0 && (
+              <DropdownMenuItem disabled>Nenhum alerta recente</DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* User Menu */}
         <DropdownMenu>
