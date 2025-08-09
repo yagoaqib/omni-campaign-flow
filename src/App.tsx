@@ -6,12 +6,15 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Campaigns from "./pages/Campaigns";
+import CampaignCreate from "./pages/CampaignCreate";
+import CampaignConsole from "./pages/CampaignConsole";
 import Templates from "./pages/Templates";
 import Contacts from "./pages/Contacts";
 import Senders from "./pages/Senders";
 import Reports from "./pages/Reports";
 import Admin from "./pages/Admin";
 import Logs from "./pages/Logs";
+
 
 const queryClient = new QueryClient();
 
@@ -24,6 +27,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/campaigns" element={<Campaigns />} />
+          <Route path="/campaigns/new" element={<CampaignCreate />} />
+          <Route path="/campaigns/:id/console" element={<CampaignConsole />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="/contacts" element={<Contacts />} />
           <Route path="/senders" element={<Senders />} />

@@ -3,6 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { Switch } from "@/components/ui/switch"
+import { Slider } from "@/components/ui/slider"
+import { Input } from "@/components/ui/input"
+import PoolEditor from "@/components/senders/PoolEditor"
+import { useState } from "react"
 import { Phone, Play, Pause, Settings, TrendingUp, AlertTriangle } from "lucide-react"
 
 const Senders = () => {
@@ -73,6 +78,11 @@ const Senders = () => {
     }
   ]
 
+  const [openEditor, setOpenEditor] = useState(false)
+  const [autoBalance, setAutoBalance] = useState(true)
+  const [weights, setWeights] = useState<Record<number, number>>({ 1: 50, 2: 30, 3: 20, 4: 10 })
+  const [baseTps, setBaseTps] = useState<Record<number, number>>({ 1: 20, 2: 15, 3: 18, 4: 10 })
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "healthy": return "bg-success-soft text-success"
@@ -107,9 +117,18 @@ const Senders = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Números & Senders</h1>
-            <p className="text-muted-foreground">
-              Monitore a saúde e performance dos seus números WhatsApp
-            </p>
+            <p className="text-muted-foreground">Monitore a saúde e o rodízio dos seus números</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-sm">
+              <div className="font-medium">Pool Marketing BR (3 números)</div>
+              <div className="text-muted-foreground">Política: WRR + Auto-Throttle</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Balanceamento automático</span>
+              <Switch checked={autoBalance} onCheckedChange={(v) => setAutoBalance(!!v)} />
+            </div>
+            <Button variant="outline" onClick={() => setOpenEditor(true)}>Editar Pool</Button>
           </div>
         </div>
 
@@ -209,7 +228,7 @@ const Senders = () => {
                 {/* Tier Usage */}
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="font-medium">Tier Usage</span>
+                    <span className="font-medium">Tier</span>
                     <span>{sender.tier.used.toLocaleString()} / {sender.tier.limit.toLocaleString()}</span>
                   </div>
                   <Progress 
@@ -218,6 +237,24 @@ const Senders = () => {
                   />
                   <div className="text-xs text-muted-foreground">
                     {Math.round((sender.tier.used / sender.tier.limit) * 100)}% utilizado
+                  </div>
+                </div>
+
+                {/* Weight & TPS Controls */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Peso no rodízio</span>
+                      <span className="text-muted-foreground">{weights[sender.id] ?? 0}%</span>
+                    </div>
+                    <Slider value={[weights[sender.id] ?? 0]} max={100} step={1} onValueChange={(v) => setWeights((w) => ({ ...w, [sender.id]: v[0] }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>TPS base</span>
+                      <span className="text-muted-foreground">{baseTps[sender.id] ?? 0}</span>
+                    </div>
+                    <Input type="number" value={baseTps[sender.id] ?? 0} onChange={(e) => setBaseTps((t) => ({ ...t, [sender.id]: Number(e.target.value) }))} />
                   </div>
                 </div>
 
@@ -259,6 +296,7 @@ const Senders = () => {
           ))}
         </div>
       </div>
+      <PoolEditor open={openEditor} onOpenChange={setOpenEditor} />
     </AppLayout>
   )
 }

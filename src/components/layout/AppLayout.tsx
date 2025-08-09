@@ -2,6 +2,7 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "./AppSidebar"
 import { TopBar } from "./TopBar"
 import { Footer } from "./Footer"
+import OpsRibbonTabs from "@/components/ops/OpsRibbonTabs"
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -14,6 +15,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar />
         <div className="flex-1 flex flex-col">
           <TopBar />
+          {/* Ops Ribbon Tabs */}
+          <OpsRibbonTabs />
           <main className="flex-1 overflow-auto">
             <div className="container mx-auto p-6">
               {children}

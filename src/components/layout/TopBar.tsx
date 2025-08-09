@@ -1,4 +1,4 @@
-import { Search, Bell, ChevronDown, Wifi, WifiOff } from "lucide-react"
+import { Search, Bell, ChevronDown, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Link } from "react-router-dom"
 
 const workspaces = [
   { id: "1", name: "Produção", status: "active" },
@@ -66,11 +67,10 @@ export function TopBar() {
         {/* Health Indicators */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-sm">
-            <Wifi className="w-4 h-4 text-success" />
             <span className="text-muted-foreground">Fila:</span>
             <Badge variant="secondary">1,234</Badge>
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm">
             <div className="w-2 h-2 bg-success rounded-full"></div>
             <span className="text-muted-foreground">Webhooks</span>
@@ -82,8 +82,16 @@ export function TopBar() {
           </div>
         </div>
 
+        {/* Nova Campanha */}
+        <Button asChild className="gap-2">
+          <Link to="/campaigns/new" aria-label="Nova campanha">
+            <Plus className="w-4 h-4" />
+            Nova campanha
+          </Link>
+        </Button>
+
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
           <Bell className="w-4 h-4" />
           <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full flex items-center justify-center">
             <span className="text-[10px] text-destructive-foreground font-medium">3</span>
