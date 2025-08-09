@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import * as React from "react";
+import { GripVertical } from "lucide-react";
+import { AVAILABLE_NUMBERS } from "@/data/numbersPool";
 
 export type MinQuality = "HIGH" | "MEDIUM" | "LOW";
 export type DesiredCategory = "UTILITY" | "MARKETING";
@@ -29,14 +31,7 @@ export const defaultCascadePolicyConfig: CascadePolicyConfig = {
   retry: { max: 3, backoffSec: 10 },
 };
 
-// Mock de números disponíveis (poderia vir do pool real futuramente)
-const AVAILABLE_NUMBERS: { id: string; label: string; quality: MinQuality; status: "ACTIVE" | "PAUSED" | "BLOCKED" }[] = [
-  { id: "num_A", label: "Sender-01 (+55 11)", quality: "HIGH", status: "ACTIVE" },
-  { id: "num_B", label: "Sender-02 (+55 21)", quality: "MEDIUM", status: "ACTIVE" },
-  { id: "num_C", label: "Sender-03 (+55 31)", quality: "HIGH", status: "ACTIVE" },
-  { id: "num_D", label: "Sender-04 (+55 41)", quality: "LOW", status: "PAUSED" },
-  { id: "num_E", label: "Sender-05 (+55 51)", quality: "HIGH", status: "ACTIVE" },
-];
+// Números agora vêm do Pool real (src/data/numbersPool.ts)
 
 function QualityBadge({ q }: { q: MinQuality }) {
   const tone = q === "HIGH" ? "default" : q === "MEDIUM" ? "secondary" : "outline";
@@ -80,6 +75,23 @@ export default function CascadePolicyEditor({ value, onChange }: Props) {
 
   const availableToAdd = AVAILABLE_NUMBERS.filter((n) => !cfg.numbers_order.includes(n.id));
 
+  // Drag and drop handlers para reordenar números
+  const dragIndex = React.useRef<number | null>(null);
+  const handleDragStart = (index: number) => (e: React.DragEvent) => {
+    dragIndex.current = index;
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+  const handleDrop = (index: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const from = dragIndex.current;
+    dragIndex.current = null;
+    if (from === null || from === index) return;
+    setCfg((c) => ({ ...c, numbers_order: moveItem(c.numbers_order, from, index) }));
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -108,14 +120,24 @@ export default function CascadePolicyEditor({ value, onChange }: Props) {
             {cfg.numbers_order.map((id, idx) => {
               const meta = AVAILABLE_NUMBERS.find((n) => n.id === id);
               return (
-                <div key={id} className="flex items-center gap-3 p-3">
-                  <div className="w-8 text-center text-sm text-muted-foreground">{idx + 1}</div>
+                <div
+                  key={id}
+                  className="flex items-center gap-3 p-3 cursor-move"
+                  draggable
+                  onDragStart={handleDragStart(idx)}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop(idx)}
+                >
+                  <div className="flex items-center gap-2 w-12">
+                    <GripVertical className="h-4 w-4 text-muted-foreground" aria-hidden />
+                    <div className="w-6 text-center text-sm text-muted-foreground">{idx + 1}</div>
+                  </div>
                   <div className="flex-1">
                     <div className="font-medium">{meta?.label ?? id}</div>
                     <div className="text-xs text-muted-foreground flex items-center gap-2">
                       <span>Status: {meta?.status ?? "ACTIVE"}</span>
                       <span>•</span>
-                      <span className="flex items-center gap-1">Qualidade: <QualityBadge q={meta?.quality ?? "HIGH"} /></span>
+                      <span className="flex items-center gap-1">Qualidade: <QualityBadge q={(meta?.quality as MinQuality) ?? "HIGH"} /></span>
                     </div>
                   </div>
                   <div className="w-36">
@@ -133,22 +155,6 @@ export default function CascadePolicyEditor({ value, onChange }: Props) {
                     />
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => idx > 0 && setCfg((c) => ({ ...c, numbers_order: moveItem(c.numbers_order, idx, idx - 1) }))}
-                      disabled={idx === 0}
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => idx < cfg.numbers_order.length - 1 && setCfg((c) => ({ ...c, numbers_order: moveItem(c.numbers_order, idx, idx + 1) }))}
-                      disabled={idx === cfg.numbers_order.length - 1}
-                    >
-                      ↓
-                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => removeNumber(id)}>Remover</Button>
                   </div>
                 </div>
