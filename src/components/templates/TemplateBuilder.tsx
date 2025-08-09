@@ -63,7 +63,39 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
   const [variableValues, setVariableValues] = React.useState<Record<string, string>>({})
 
   const variableNumbers = React.useMemo(() => extractVariableNumbers(body), [body])
+  const headerVariableNumbers = React.useMemo(
+    () => (headerType === "TEXT" ? extractVariableNumbers(headerText) : []),
+    [headerType, headerText]
+  )
 
+  const [bodyExampleSets, setBodyExampleSets] = React.useState<string[][]>(
+    initial?.examples?.bodyTextSets?.length
+      ? initial.examples.bodyTextSets
+      : [Array(variableNumbers.length).fill("")]
+  )
+  const [headerExampleValues, setHeaderExampleValues] = React.useState<string[]>(
+    initial?.examples?.headerTextValues ?? Array(headerVariableNumbers.length).fill("")
+  )
+
+  React.useEffect(() => {
+    setBodyExampleSets((prev) => {
+      const ensureLen = (arr: string[]) => {
+        const next = Array(variableNumbers.length).fill("") as string[]
+        for (let i = 0; i < Math.min(arr.length, next.length); i++) next[i] = arr[i]
+        return next
+      }
+      if (!prev.length) return [ensureLen([])]
+      return prev.map(ensureLen)
+    })
+  }, [variableNumbers])
+
+  React.useEffect(() => {
+    setHeaderExampleValues((prev) => {
+      const next = Array(headerVariableNumbers.length).fill("") as string[]
+      for (let i = 0; i < Math.min(prev.length, next.length); i++) next[i] = prev[i]
+      return next
+    })
+  }, [headerVariableNumbers])
   React.useEffect(() => {
     // ensure variable values keys
     setVariableValues((prev) => {
@@ -97,6 +129,16 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
     setTimeout(() => ta.setSelectionRange(pos, pos))
   }
 
+  const fillFromPreview = () => {
+    const first = variableNumbers.map((n) => variableValues[n] ?? "")
+    setBodyExampleSets((prev) => {
+      const next = [...prev]
+      if (next.length === 0) next.push(first)
+      else next[0] = first
+      return next
+    })
+  }
+
   const onSubmit = () => {
     const now = new Date().toISOString()
     const headerMedia: TemplateMedia | undefined =
@@ -120,6 +162,10 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
       wabaStatuses: initial?.wabaStatuses ?? [],
+      examples: {
+        bodyTextSets: bodyExampleSets,
+        headerTextValues: headerType === "TEXT" && headerVariableNumbers.length ? headerExampleValues : undefined,
+      },
     }
     onSave(model)
   }
@@ -260,6 +306,65 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Exemplos para publicação */}
+            <div className="space-y-3">
+              <Label>Exemplos para publicação (Meta)</Label>
+              {variableNumbers.length > 0 && (
+                <div className="space-y-2 rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium">Corpo – Conjuntos de exemplo</div>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="outline" onClick={fillFromPreview}>Usar valores do preview</Button>
+                      <Button type="button" size="sm" onClick={() => setBodyExampleSets((prev) => [...prev, Array(variableNumbers.length).fill("")])}>Adicionar conjunto</Button>
+                    </div>
+                  </div>
+                  {bodyExampleSets.map((set, i) => (
+                    <div key={i} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 items-start">
+                      {variableNumbers.map((n, idx) => (
+                        <Input
+                          key={n}
+                          value={set[idx] ?? ""}
+                          onChange={(e) => setBodyExampleSets((prev) => {
+                            const copy = prev.map((x) => [...x])
+                            copy[i][idx] = e.target.value
+                            return copy
+                          })}
+                          placeholder={`Conj. ${i + 1} • {{${n}}}`}
+                        />
+                      ))}
+                      {i > 0 && (
+                        <div className="flex">
+                          <Button type="button" variant="ghost" size="icon" onClick={() => setBodyExampleSets((prev) => prev.filter((_, j) => j !== i))}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {headerType === "TEXT" && headerVariableNumbers.length > 0 && (
+                <div className="space-y-2 rounded-md border p-3">
+                  <div className="font-medium">Cabeçalho – Exemplos</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {headerVariableNumbers.map((n, idx) => (
+                      <Input
+                        key={n}
+                        value={headerExampleValues[idx] ?? ""}
+                        onChange={(e) => setHeaderExampleValues((prev) => {
+                          const arr = [...prev]
+                          arr[idx] = e.target.value
+                          return arr
+                        })}
+                        placeholder={`{{${n}}}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">

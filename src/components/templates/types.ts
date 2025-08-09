@@ -26,6 +26,13 @@ export interface WABAStatus {
   error?: string
 }
 
+export interface TemplateExamples {
+  // Conjuntos de exemplos para o corpo (cada conjunto corresponde às variáveis {{1}}, {{2}}, ... em ordem)
+  bodyTextSets: string[][]
+  // Exemplos para variáveis no cabeçalho de texto, se houver
+  headerTextValues?: string[]
+}
+
 export interface TemplateModel {
   id: string
   name: string
@@ -40,7 +47,9 @@ export interface TemplateModel {
   createdAt: string
   updatedAt: string
   wabaStatuses: WABAStatus[]
+  examples?: TemplateExamples
 }
+
 
 export const defaultWABAs: { wabaId: string; phoneName: string }[] = [
   { wabaId: "waba-1", phoneName: "Sender-01" },
