@@ -11,6 +11,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { AVAILABLE_NUMBERS, NUMBERS_STORAGE_KEY, NumberInfo, NumberStatus, PoolMinQuality, loadAvailableNumbers } from "@/data/numbersPool";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import NumberWizard from "@/components/admin/NumberWizard";
 
 // Tipo estendido apenas para Admin (mantém compatibilidade com NumberInfo em outras telas)
 export type ExtendedNumber = NumberInfo & {
@@ -19,6 +20,15 @@ export type ExtendedNumber = NumberInfo & {
   phoneId?: string;
   tps?: number;
   utilityTemplates?: string[];
+  // Campos adicionais do wizard
+  phoneE164?: string;
+  usage?: "marketing" | "transacional" | "ambos";
+  pools?: string[];
+  canFallback?: boolean;
+  // payloads específicos (mantidos para futura edição)
+  meta?: any;
+  infobip?: any;
+  gupshup?: any;
 };
 
 const qualityOptions: PoolMinQuality[] = ["HIGH", "MEDIUM", "LOW"];
@@ -27,10 +37,11 @@ const statusOptions: NumberStatus[] = ["ACTIVE", "PAUSED", "BLOCKED"];
 export default function NumbersIntegration() {
   const { toast } = useToast();
   const [items, setItems] = useLocalStorage<ExtendedNumber[]>(NUMBERS_STORAGE_KEY, []);
-  const [open, setOpen] = React.useState(false);
-  const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
-  const [form, setForm] = React.useState<ExtendedNumber>({ id: "", label: "", quality: "HIGH", status: "ACTIVE", provider: "", wabaId: "", phoneId: "", tps: 10, utilityTemplates: [] });
-  const [newTpl, setNewTpl] = React.useState("");
+const [open, setOpen] = React.useState(false);
+const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
+const [form, setForm] = React.useState<ExtendedNumber>({ id: "", label: "", quality: "HIGH", status: "ACTIVE", provider: "", wabaId: "", phoneId: "", tps: 10, utilityTemplates: [] });
+const [newTpl, setNewTpl] = React.useState("");
+const [wizardOpen, setWizardOpen] = React.useState(false);
 
   // Seed inicial a partir do pool atual quando storage vazio
   React.useEffect(() => {
@@ -69,11 +80,17 @@ export default function NumbersIntegration() {
     toast({ title: "Número removido" });
   };
 
-  const updateInline = (idx: number, patch: Partial<ExtendedNumber>) => {
-    const next = [...items];
-    next[idx] = { ...next[idx], ...patch };
-    setItems(next);
-  };
+const updateInline = (idx: number, patch: Partial<ExtendedNumber>) => {
+  const next = [...items];
+  next[idx] = { ...next[idx], ...patch };
+  setItems(next);
+};
+
+const handleWizardSaved = (data: ExtendedNumber) => {
+  setItems((prev) => [...prev, data]);
+  setWizardOpen(false);
+  toast({ title: "Número adicionado", description: "Criado via Wizard e salvo localmente." });
+};
 
   const addTemplate = () => {
     if (!newTpl.trim()) return;
@@ -91,12 +108,17 @@ export default function NumbersIntegration() {
         <CardTitle>Integrações · Números</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground">Cadastre os números (WABA/Phone ID), status/qualidade e templates de utilidade. Persistência local.</p>
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-2" /> Adicionar número
-          </Button>
-        </div>
+<div className="flex items-center justify-between gap-2">
+  <p className="text-muted-foreground">Cadastre os números (WABA/Phone ID), status/qualidade e templates de utilidade. Persistência local.</p>
+  <div className="flex items-center gap-2">
+    <Button variant="secondary" onClick={() => setWizardOpen(true)}>
+      <Plus className="h-4 w-4 mr-2" /> Novo número (Wizard)
+    </Button>
+    <Button onClick={openCreate}>
+      <Plus className="h-4 w-4 mr-2" /> Adicionar número
+    </Button>
+  </div>
+</div>
 
         <div className="rounded-md border overflow-hidden">
           <Table>
@@ -152,7 +174,9 @@ export default function NumbersIntegration() {
           </Table>
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
+<NumberWizard open={wizardOpen} onOpenChange={setWizardOpen} onSave={handleWizardSaved} />
+
+<Dialog open={open} onOpenChange={setOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingIndex === null ? "Novo número" : "Editar número"}</DialogTitle>
@@ -219,9 +243,9 @@ export default function NumbersIntegration() {
               </div>
             </div>
 
-            <DialogFooter>
-              <Button onClick={saveForm}>Salvar</Button>
-            </DialogFooter>
+<DialogFooter>
+  <Button onClick={saveForm}>Salvar</Button>
+</DialogFooter>
           </DialogContent>
         </Dialog>
       </CardContent>
