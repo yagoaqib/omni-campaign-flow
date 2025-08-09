@@ -31,18 +31,20 @@ export default function PoolEditor({ open, onOpenChange }: PoolEditorProps) {
     cooldown: true,
   });
 
-  const [senders] = useState<SenderOption[]>([
+  const [senders, setSenders] = useState<SenderOption[]>([
     { id: 1, name: "Sender-01", checked: true },
     { id: 2, name: "Sender-02", checked: true },
     { id: 3, name: "Sender-03", checked: true },
   ]);
+  const selectedIds = senders.filter(s => s.checked).map(s => s.id);
+  const [sequenceOrder, setSequenceOrder] = useState<number[]>(selectedIds);
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-w-3xl ml-auto">
         <DrawerHeader>
           <DrawerTitle>Editor de Pool</DrawerTitle>
-          <DrawerDescription>Defina a política de rodízio, regras automáticas e TPS.</DrawerDescription>
+          <DrawerDescription>Escolha os números do pool, defina a ordem de failover, política e TPS.</DrawerDescription>
         </DrawerHeader>
 
         <Tabs defaultValue="config" className="p-6">
@@ -59,7 +61,12 @@ export default function PoolEditor({ open, onOpenChange }: PoolEditorProps) {
               <div className="grid grid-cols-2 gap-3">
                 {senders.map((s) => (
                   <label key={s.id} className="flex items-center gap-3 rounded-md border p-3 cursor-pointer">
-                    <Checkbox defaultChecked={s.checked} />
+                    <Checkbox 
+                      checked={s.checked}
+                      onCheckedChange={(v) =>
+                        setSenders((prev) => prev.map(p => p.id === s.id ? { ...p, checked: !!v } : p))
+                      }
+                    />
                     <span>{s.name}</span>
                   </label>
                 ))}
@@ -130,7 +137,8 @@ export default function PoolEditor({ open, onOpenChange }: PoolEditorProps) {
           <TabsContent value="failover" className="mt-6">
             <FailoverSequence 
               poolId="pool-1" 
-              onOrderChange={(order) => console.log("Nova ordem:", order)} 
+              selectedIds={selectedIds}
+              onOrderChange={(order) => setSequenceOrder(order)} 
             />
           </TabsContent>
 

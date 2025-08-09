@@ -25,7 +25,7 @@ export default function CampaignConsole() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline">Pausar</Button>
-            <Button onClick={() => setOpenPool(true)}>Ajustar Rodízio</Button>
+            <Button onClick={() => setOpenPool(true)}>Configurar Números e Sequência</Button>
             <Button variant="outline">Exportar CSV</Button>
           </div>
         </div>

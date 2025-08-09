@@ -12,11 +12,12 @@ import {
   Phone,
   Smartphone
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface FailoverSequenceProps {
   poolId: string;
   onOrderChange?: (newOrder: number[]) => void;
+  selectedIds?: number[];
 }
 
 interface WABAInSequence {
@@ -72,8 +73,18 @@ const mockWABAs: WABAInSequence[] = [
   },
 ];
 
-export function FailoverSequence({ poolId, onOrderChange }: FailoverSequenceProps) {
-  const [sequence, setSequence] = useState<WABAInSequence[]>(mockWABAs);
+export function FailoverSequence({ poolId, onOrderChange, selectedIds }: FailoverSequenceProps) {
+  const [sequence, setSequence] = useState<WABAInSequence[]>(
+    selectedIds && selectedIds.length
+      ? mockWABAs.filter(w => selectedIds.includes(w.id))
+      : mockWABAs
+  );
+
+  useEffect(() => {
+    if (!selectedIds) return;
+    const filtered = mockWABAs.filter(w => selectedIds.includes(w.id));
+    setSequence(filtered);
+  }, [selectedIds]);
 
   const moveUp = (index: number) => {
     if (index === 0) return;
