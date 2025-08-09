@@ -2,8 +2,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { KpiTile } from "@/components/dashboard/KpiTile";
 import { FunnelCompact } from "@/components/dashboard/FunnelCompact";
 import { SingleLineChart } from "@/components/dashboard/SingleLineChart";
-import { ErrorPanel } from "@/components/dashboard/ErrorPanel";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,18 +27,6 @@ const chartData = [
   { time: "20:00", delivered: 1600, read: 1280 },
 ];
 
-const errorData = [
-  { reason: "Rate limit exceeded", count: 145, percentage: 45.2, color: "#EF4444" },
-  { reason: "Undeliverable", count: 98, percentage: 30.5, color: "#F59E0B" },
-  { reason: "Template mismatch", count: 78, percentage: 24.3, color: "#6B7280" },
-];
-
-const recentAlerts = [
-  { id: 1, type: "quality", message: "Quality drop em WABA-01", time: "2 min", severity: "warning" },
-  { id: 2, type: "tier", message: "Tier 90% atingido WABA-02", time: "5 min", severity: "error" },
-  { id: 3, type: "429", message: "429 burst detectado", time: "8 min", severity: "error" },
-  { id: 4, type: "template", message: "Template sync pendente", time: "12 min", severity: "info" },
-];
 
 function Index() {
   const navigate = useNavigate();
@@ -109,39 +97,6 @@ function Index() {
           <SingleLineChart data={chartData} />
         </div>
 
-        {/* Bottom Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ErrorPanel 
-            errors={errorData} 
-            onViewSamples={(reason) => console.log("View samples for:", reason)} 
-          />
-          
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Alertas Recentes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {recentAlerts.map((alert) => (
-                <div key={alert.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                  <div className={`w-2 h-2 rounded-full ${
-                    alert.severity === 'error' ? 'bg-destructive' : 
-                    alert.severity === 'warning' ? 'bg-warning' : 'bg-primary'
-                  }`} />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{alert.message}</p>
-                    <p className="text-xs text-muted-foreground">{alert.time}</p>
-                  </div>
-                </div>
-              ))}
-              
-              {recentAlerts.length === 0 && (
-                <div className="text-center py-4 text-muted-foreground">
-                  Nenhum alerta recente
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </AppLayout>
   );
