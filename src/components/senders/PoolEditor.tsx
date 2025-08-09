@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FailoverSequence } from "./FailoverSequence";
+import { WRRContinuityExample } from "./WRRContinuityExample";
 import { useState } from "react";
 
 interface SenderOption {
@@ -45,9 +46,10 @@ export default function PoolEditor({ open, onOpenChange }: PoolEditorProps) {
         </DrawerHeader>
 
         <Tabs defaultValue="config" className="p-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="config">Configuração</TabsTrigger>
             <TabsTrigger value="failover">Sequência de Failover</TabsTrigger>
+            <TabsTrigger value="continuity">Continuidade WRR</TabsTrigger>
           </TabsList>
           
           <TabsContent value="config" className="space-y-6 mt-6">
@@ -130,6 +132,10 @@ export default function PoolEditor({ open, onOpenChange }: PoolEditorProps) {
               poolId="pool-1" 
               onOrderChange={(order) => console.log("Nova ordem:", order)} 
             />
+          </TabsContent>
+
+          <TabsContent value="continuity" className="mt-6">
+            <WRRContinuityExample />
           </TabsContent>
         </Tabs>
 
