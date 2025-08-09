@@ -10,10 +10,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useOpsTabs } from "@/context/OpsTabsContext";
 
+import CascadePolicyEditor, { CascadePolicyConfig, defaultCascadePolicyConfig } from "@/components/campaigns/CascadePolicyEditor";
+
 export default function CampaignCreate() {
   const [step, setStep] = useState(1);
   const [autoBalance, setAutoBalance] = useState(true);
   const [tps, setTps] = useState<number[]>([20]);
+  const [cascadeConfig, setCascadeConfig] = useState<CascadePolicyConfig>(defaultCascadePolicyConfig);
   const navigate = useNavigate();
   const { openTab } = useOpsTabs();
 
@@ -105,6 +108,10 @@ export default function CampaignCreate() {
                   <p className="text-xs text-muted-foreground mt-2">Alocação prevista por sender mostrada ao lançar.</p>
                 </div>
               </div>
+
+              <div className="pt-4">
+                <CascadePolicyEditor value={cascadeConfig} onChange={setCascadeConfig} />
+              </div>
             </CardContent>
           </Card>
         )}
@@ -195,6 +202,11 @@ export default function CampaignCreate() {
                   <div className="text-sm text-muted-foreground">Alertas</div>
                   <div className="text-sm">Tier 90% no Sender-02</div>
                 </div>
+              </div>
+
+              <div>
+                <div className="text-sm text-muted-foreground mb-2">Configuração de Cascata (JSON)</div>
+                <pre className="text-xs rounded-md border p-3 bg-muted/30 overflow-auto">{JSON.stringify(cascadeConfig, null, 2)}</pre>
               </div>
             </CardContent>
           </Card>
