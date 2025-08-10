@@ -24,30 +24,11 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, cata
   const [localTpl, setLocalTpl] = React.useState("");
   const [targetNumberId, setTargetNumberId] = React.useState<string>("");
   const [targetTpl, setTargetTpl] = React.useState("");
-  // Equivalentes locais (mesmo número)
-  const [localFrom, setLocalFrom] = React.useState("");
-  const [localTo, setLocalTo] = React.useState("");
   // Cascata local (ordem por ID)
   const [newSeqTpl, setNewSeqTpl] = React.useState<string>("");
 
   const selectableNumbers = React.useMemo(() => numbers.filter((n) => n.id !== currentId), [numbers, currentId]);
-
-  const localEquivalents = React.useMemo(() => (mappings ?? []).filter((m) => m.targetNumberId === currentId), [mappings, currentId]);
   const crossNumberMappings = React.useMemo(() => (mappings ?? []).filter((m) => m.targetNumberId !== currentId), [mappings, currentId]);
-
-  const addLocalEquivalent = () => {
-    if (!localFrom.trim() || !localTo.trim()) return;
-    const next: TemplateMapping = {
-      id: `map_${Date.now()}`,
-      local: localFrom.trim(),
-      targetNumberId: currentId,
-      targetTemplate: localTo.trim(),
-    };
-    onChange([...(mappings ?? []), next]);
-    setLocalFrom("");
-    setLocalTo("");
-    toast({ title: "Equivalente local adicionado", description: "Usado antes do fallback entre números." });
-  };
 
   const addMapping = () => {
     if (!localTpl.trim() || !targetTpl.trim() || !targetNumberId) return;
@@ -103,7 +84,7 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, cata
     <div className="space-y-6">
       {/* Cascata local por IDs */}
       <div className="space-y-2">
-        <Label>Cascata local (mesmo número — por ID)</Label>
+        <Label>Cascata local (mesmo número — ordem sequencial)</Label>
         <div className="flex items-center gap-2">
           <Select value={newSeqTpl} onValueChange={setNewSeqTpl}>
             <SelectTrigger className="w-full md:w-[420px]"><SelectValue placeholder="Selecione o ID do template" /></SelectTrigger>
@@ -119,7 +100,7 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, cata
           </Select>
           <Button variant="secondary" onClick={addSeq} disabled={!newSeqTpl || newSeqTpl === "__empty"}>Adicionar</Button>
         </div>
-        <p className="text-xs text-muted-foreground">A tentativa seguirá a ordem abaixo. Gatilhos: RED/Paused/Disabled ou reclassificação para Marketing.</p>
+        <p className="text-xs text-muted-foreground">Template 1 falha → tenta Template 2 → tenta Template 3... Gatilhos: RED/Paused/Disabled ou reclassificação para Marketing.</p>
         <div className="space-y-2 mt-2">
           {utilityTemplates.length === 0 ? (
             <p className="text-xs text-muted-foreground">Nenhum template na cascata ainda.</p>
@@ -142,69 +123,9 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, cata
         </div>
       </div>
 
-      {/* Overrides específicos A→B (opcional) */}
-      <div className="space-y-2">
-        <Label>Overrides A→B (mesmo número, opcional)</Label>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-          <div className="md:col-span-5">
-            <Label className="text-xs">Quando usar</Label>
-            <Select value={localFrom} onValueChange={setLocalFrom}>
-              <SelectTrigger><SelectValue placeholder="Selecione o ID" /></SelectTrigger>
-              <SelectContent>
-                {catalog.map((t) => (<SelectItem key={t.id} value={t.id}>{t.id} — {t.name}</SelectItem>))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-6">
-            <Label className="text-xs">Trocar para</Label>
-            <Select value={localTo} onValueChange={setLocalTo}>
-              <SelectTrigger><SelectValue placeholder="Selecione o ID" /></SelectTrigger>
-              <SelectContent>
-                {catalog.map((t) => (<SelectItem key={t.id} value={t.id}>{t.id} — {t.name}</SelectItem>))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-1">
-            <Button className="w-full" variant="secondary" onClick={addLocalEquivalent}>Adicionar</Button>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground">Use overrides apenas quando um template específico exigir um próximo diferente da ordem padrão.</p>
-
-        <div className="rounded-md border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Template local</TableHead>
-                <TableHead>Usar em seguida</TableHead>
-                <TableHead className="w-[80px]">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {localEquivalents.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">Nenhum override cadastrado.</TableCell>
-                </TableRow>
-              ) : (
-                localEquivalents.map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell className="font-mono text-xs">{m.local}</TableCell>
-                    <TableCell className="font-mono text-xs">{m.targetTemplate}</TableCell>
-                    <TableCell>
-                      <Button size="icon" variant="destructive" onClick={() => removeMapping(m.id)} aria-label="Excluir">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-
       {/* Fallback entre números */}
       <div className="space-y-2">
-        <Label>Adicionar mapeamento de fallback entre números</Label>
+        <Label>Fallback entre números</Label>
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
           <div className="md:col-span-4">
             <Label className="text-xs">Template local</Label>
@@ -239,7 +160,7 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, cata
             <Button className="w-full" variant="secondary" onClick={addMapping}>Adicionar</Button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">Primeiro executamos a cascata local; o fallback entre números só ocorre quando a qualidade do número cair de HIGH.</p>
+        <p className="text-xs text-muted-foreground">Só ocorre quando a qualidade global do número cair de HIGH. Primeiro esgota a cascata local.</p>
 
         <div className="rounded-md border overflow-hidden">
           <Table>
