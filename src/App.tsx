@@ -14,6 +14,7 @@ import Senders from "./pages/Senders";
 import Reports from "./pages/Reports";
 import Admin from "./pages/Admin";
 import Logs from "./pages/Logs";
+import Performance from "./pages/Performance";
 
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/reports" element={<Reports />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/logs" element={<Logs />} />
+          <Route path="/performance" element={<Performance />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

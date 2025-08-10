@@ -10,7 +10,8 @@ import {
   FileSearch,
   Search,
   Bell,
-  ChevronLeft
+  ChevronLeft,
+  Gauge
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
@@ -33,6 +34,7 @@ const mainNavItems = [
   { title: "Templates", url: "/templates", icon: FileText },
   { title: "Contatos", url: "/contacts", icon: Users },
   { title: "Números", url: "/senders", icon: Phone },
+  { title: "Performance", url: "/performance", icon: Gauge },
   { title: "Relatórios", url: "/reports", icon: TrendingUp },
 ]
 
