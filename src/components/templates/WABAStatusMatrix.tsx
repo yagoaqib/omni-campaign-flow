@@ -68,7 +68,9 @@ export default function WABAStatusMatrix({ template, onSimulateSync }: Props) {
           </div>
         ))}
         <Separator />
-        <div className="text-xs text-muted-foreground">Ao integrar o backend, este painel refletirá o status real retornado pela Graph API para cada número do pool.</div>
+        <div className="text-xs text-muted-foreground">
+          <strong>Informação automática:</strong> Status por WABA é sincronizado automaticamente pela Meta Graph API. Não precisa ser preenchido manualmente.
+        </div>
       </CardContent>
     </Card>
   )

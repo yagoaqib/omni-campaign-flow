@@ -182,7 +182,7 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
       buttons,
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
-      wabaStatuses: initial?.wabaStatuses ?? [],
+      wabaStatuses: initial?.wabaStatuses ?? [], // Preenchido automaticamente pela Meta API
       examples: {
         bodyTextSets: bodyExampleSets,
         headerTextValues: headerType === "TEXT" && headerVariableNumbers.length ? headerExampleValues : undefined,
