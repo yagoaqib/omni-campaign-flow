@@ -57,12 +57,6 @@ const [wizardOpen, setWizardOpen] = React.useState(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openCreate = () => {
-    setEditingIndex(null);
-    setForm({ id: `num_${Date.now()}`, label: "", quality: "HIGH", status: "ACTIVE", provider: "", wabaId: "", phoneId: "", tps: 10, utilityTemplates: [], equivalentMappings: [] });
-    setOpen(true);
-  };
-
   const openEdit = (idx: number) => {
     setEditingIndex(idx);
     setForm(items[idx]);
@@ -118,9 +112,6 @@ const handleWizardSaved = (data: ExtendedNumber) => {
   <div className="flex items-center gap-2">
     <Button variant="secondary" onClick={() => setWizardOpen(true)}>
       <Plus className="h-4 w-4 mr-2" /> Novo número (Wizard)
-    </Button>
-    <Button onClick={openCreate}>
-      <Plus className="h-4 w-4 mr-2" /> Adicionar número
     </Button>
   </div>
 </div>
