@@ -160,7 +160,7 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, cata
             <Button className="w-full" variant="secondary" onClick={addMapping}>Adicionar</Button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">Só ocorre quando a qualidade global do número cair de HIGH. Primeiro esgota a cascata local.</p>
+        <p className="text-xs text-muted-foreground">Ocorre quando a qualidade do número cair da atual (HIGH→MEDIUM/LOW, MEDIUM→LOW). Primeiro esgota a cascata local.</p>
 
         <div className="rounded-md border overflow-hidden">
           <Table>
