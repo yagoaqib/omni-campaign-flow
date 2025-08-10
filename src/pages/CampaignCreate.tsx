@@ -6,20 +6,88 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useOpsTabs } from "@/context/OpsTabsContext";
 
 import CascadePolicyEditor, { CascadePolicyConfig, defaultCascadePolicyConfig } from "@/components/campaigns/CascadePolicyEditor";
+import { AVAILABLE_NUMBERS } from "@/data/numbersPool";
 
 export default function CampaignCreate() {
   const [step, setStep] = useState(1);
   const [autoBalance, setAutoBalance] = useState(true);
   const [tps, setTps] = useState<number[]>([20]);
   const [cascadeConfig, setCascadeConfig] = useState<CascadePolicyConfig>(defaultCascadePolicyConfig);
+
+  // Farm models
+  const [farmModel, setFarmModel] = useState<"none" | "1k" | "10k" | "100k">("none");
+  const [totalTarget, setTotalTarget] = useState<number>(0);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [allocations, setAllocations] = useState<Record<string, number>>({});
+  const totalAllocated = Object.values(allocations).reduce((a, b) => a + b, 0);
+
   const navigate = useNavigate();
   const { openTab } = useOpsTabs();
 
+  const syncCascadeFromAlloc = (ids: string[], alloc: Record<string, number>) => {
+    setCascadeConfig((c) => ({
+      ...c,
+      numbers_order: ids,
+      number_quotas: ids.reduce((acc, id) => ({ ...acc, [id]: alloc[id] ?? 0 }), {} as Record<string, number>),
+    }));
+  };
+
+  const toggleNumber = (id: string) => {
+    setSelectedIds((curr) => {
+      const exists = curr.includes(id);
+      if (exists) {
+        const nextIds = curr.filter((x) => x !== id);
+        setAllocations((prev) => {
+          const { [id]: _drop, ...rest } = prev;
+          syncCascadeFromAlloc(nextIds, rest);
+          return rest;
+        });
+        return nextIds;
+      }
+      if (curr.length >= 10) return curr; // máximo 10
+      const nextIds = [...curr, id];
+      // redistribui se já houver meta total
+      if (totalTarget > 0) {
+        const base = Math.floor(totalTarget / nextIds.length);
+        const rem = totalTarget % nextIds.length;
+        const nextAlloc: Record<string, number> = {};
+        nextIds.forEach((nid, i) => (nextAlloc[nid] = base + (i < rem ? 1 : 0)));
+        setAllocations(nextAlloc);
+        syncCascadeFromAlloc(nextIds, nextAlloc);
+      }
+      return nextIds;
+    });
+  };
+
+  const equalizeAlloc = () => {
+    if (selectedIds.length === 0 || totalTarget <= 0) return;
+    const base = Math.floor(totalTarget / selectedIds.length);
+    const rem = totalTarget % selectedIds.length;
+    const nextAlloc: Record<string, number> = {};
+    selectedIds.forEach((id, i) => (nextAlloc[id] = base + (i < rem ? 1 : 0)));
+    setAllocations(nextAlloc);
+    syncCascadeFromAlloc(selectedIds, nextAlloc);
+  };
+
+  const applyModel = (model: "1k" | "10k" | "100k") => {
+    setFarmModel(model);
+    const vol = model === "1k" ? 1000 : model === "10k" ? 10000 : 100000;
+    setTotalTarget(vol);
+    if (selectedIds.length > 0) {
+      const base = Math.floor(vol / selectedIds.length);
+      const rem = vol % selectedIds.length;
+      const nextAlloc: Record<string, number> = {};
+      selectedIds.forEach((id, i) => (nextAlloc[id] = base + (i < rem ? 1 : 0)));
+      setAllocations(nextAlloc);
+      syncCascadeFromAlloc(selectedIds, nextAlloc);
+    }
+  };
   const next = () => setStep((s) => Math.min(4, s + 1));
   const prev = () => setStep((s) => Math.max(1, s - 1));
 
@@ -106,6 +174,79 @@ export default function CampaignCreate() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-2">Alocação prevista por sender mostrada ao lançar.</p>
+                </div>
+              </div>
+
+              {/* Modelos de Farm e distribuição */}
+              <div className="rounded-md border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Modelos de Farm</Label>
+                    <p className="text-xs text-muted-foreground">Selecione um preset de volume e distribua entre até 10 números.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant={farmModel === "1k" ? "default" : "outline"} size="sm" onClick={() => applyModel("1k")}>1.000</Button>
+                    <Button variant={farmModel === "10k" ? "default" : "outline"} size="sm" onClick={() => applyModel("10k")}>10.000</Button>
+                    <Button variant={farmModel === "100k" ? "default" : "outline"} size="sm" onClick={() => applyModel("100k")}>100.000</Button>
+                    <Button variant="ghost" size="sm" onClick={() => { setFarmModel("none"); setTotalTarget(0); setAllocations({}); setSelectedIds([]); }}>Limpar</Button>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Escolha até 10 números <span className="text-xs text-muted-foreground">({selectedIds.length}/10)</span></Label>
+                    <div className="rounded-md border divide-y">
+                      {AVAILABLE_NUMBERS.map((n) => {
+                        const checked = selectedIds.includes(n.id);
+                        const disabled = !checked && selectedIds.length >= 10;
+                        return (
+                          <label key={n.id} className={`flex items-center justify-between p-2 ${disabled ? "opacity-50" : ""}`}>
+                            <div className="flex items-center gap-2">
+                              <Checkbox checked={checked} onCheckedChange={() => toggleNumber(n.id)} disabled={disabled} />
+                              <div>
+                                <div className="font-medium">{n.label}</div>
+                                <div className="text-xs text-muted-foreground">Qualidade {n.quality} • {n.status}</div>
+                              </div>
+                            </div>
+                            {checked && (
+                              <div className="w-28">
+                                <Label className="text-xs">Cota (msgs)</Label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={allocations[n.id] ?? 0}
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value || 0);
+                                    const next = { ...allocations, [n.id]: val } as Record<string, number>;
+                                    setAllocations(next);
+                                    syncCascadeFromAlloc(selectedIds, next);
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </label>
+                        );
+                      })}
+                      {AVAILABLE_NUMBERS.length === 0 && <div className="p-2 text-sm text-muted-foreground">Sem números disponíveis</div>}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Meta total de envios</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={totalTarget}
+                        onChange={(e) => setTotalTarget(Number(e.target.value || 0))}
+                        placeholder="ex.: 10000"
+                      />
+                      <div className="text-xs text-muted-foreground mt-1">Distribua manualmente ou use Equalizar.</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" onClick={equalizeAlloc} disabled={selectedIds.length === 0 || totalTarget <= 0}>Equalizar</Button>
+                      <div className="text-sm text-muted-foreground">Alocado: {totalAllocated} / {totalTarget}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -196,7 +337,18 @@ export default function CampaignCreate() {
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Alocação prevista</div>
-                  <div className="text-sm">Sender-01 50% · Sender-02 30% · Sender-03 20%</div>
+                  <div className="text-sm">
+                    {selectedIds.length > 0 && totalAllocated > 0
+                      ? selectedIds
+                          .filter((id) => (allocations[id] ?? 0) > 0)
+                          .map((id) => {
+                            const meta = AVAILABLE_NUMBERS.find((n) => n.id === id);
+                            const pct = Math.round(((allocations[id] ?? 0) / totalAllocated) * 100);
+                            return `${meta?.label ?? id} ${pct}%`;
+                          })
+                          .join(" · ")
+                      : "Sender-01 50% · Sender-02 30% · Sender-03 20%"}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Alertas</div>
