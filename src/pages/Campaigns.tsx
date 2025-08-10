@@ -3,8 +3,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Play, Pause, Copy, BarChart3, Download } from "lucide-react"
+import { Link } from "react-router-dom"
+import { useEffect } from "react"
+
 
 const Campaigns = () => {
+  useEffect(() => { document.title = "Campanhas | Console" }, [])
   const campaigns = [
     {
       id: 1,
@@ -64,10 +68,20 @@ const Campaigns = () => {
               Gerencie suas campanhas de WhatsApp
             </p>
           </div>
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            Nova Campanha
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to="/campaigns/new">
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                Nova Campanha
+              </Button>
+            </Link>
+            <Link to="/campaigns/new?type=farm">
+              <Button variant="secondary" className="gap-2">
+                <Plus className="w-4 h-4" />
+                Criar Farm
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Campaigns Grid */}

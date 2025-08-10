@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOpsTabs } from "@/context/OpsTabsContext";
 
 import CascadePolicyEditor, { CascadePolicyConfig, defaultCascadePolicyConfig } from "@/components/campaigns/CascadePolicyEditor";
@@ -29,6 +29,14 @@ export default function CampaignCreate() {
 
   const navigate = useNavigate();
   const { openTab } = useOpsTabs();
+
+  const [searchParams] = useSearchParams();
+  const initialType = (searchParams.get("type") as "template" | "session" | "farm") ?? "template";
+  const [campaignType, setCampaignType] = useState<"template" | "session" | "farm">(initialType);
+
+  useEffect(() => {
+    document.title = campaignType === "farm" ? "Nova Campanha – Farm de Números | Console" : "Nova Campanha | Console";
+  }, [campaignType]);
 
   const syncCascadeFromAlloc = (ids: string[], alloc: Record<string, number>) => {
     setCascadeConfig((c) => ({
@@ -126,11 +134,12 @@ export default function CampaignCreate() {
                 </div>
                 <div>
                   <Label>Tipo</Label>
-                  <Select defaultValue="template">
+                  <Select value={campaignType} onValueChange={(v) => setCampaignType(v as any)}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="template">Template</SelectItem>
                       <SelectItem value="session">Sessão</SelectItem>
+                      <SelectItem value="farm">Farm de Números</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -178,6 +187,7 @@ export default function CampaignCreate() {
               </div>
 
               {/* Modelos de Farm e distribuição */}
+              {campaignType === "farm" && (
               <div className="rounded-md border p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -249,6 +259,8 @@ export default function CampaignCreate() {
                   </div>
                 </div>
               </div>
+              )}
+
 
               <div className="pt-4">
                 <CascadePolicyEditor value={cascadeConfig} onChange={setCascadeConfig} />
