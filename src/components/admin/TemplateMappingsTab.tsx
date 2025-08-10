@@ -4,18 +4,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2 } from "lucide-react";
+import { Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { TemplateMapping } from "./types";
+import type { TemplateModel } from "@/components/templates/types";
 
 type Props = {
   mappings: TemplateMapping[] | undefined;
   currentId: string;
   numbers: { id: string; label: string }[];
+  catalog: TemplateModel[];
+  utilityTemplates: string[];
+  onUtilityChange: (next: string[]) => void;
   onChange: (next: TemplateMapping[]) => void;
 };
 
-export default function TemplateMappingsTab({ mappings, currentId, numbers, onChange }: Props) {
+export default function TemplateMappingsTab({ mappings, currentId, numbers, catalog, utilityTemplates, onUtilityChange, onChange }: Props) {
   const { toast } = useToast();
   const [localTpl, setLocalTpl] = React.useState("");
   const [targetNumberId, setTargetNumberId] = React.useState<string>("");
@@ -23,6 +27,8 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, onCh
   // Equivalentes locais (mesmo número)
   const [localFrom, setLocalFrom] = React.useState("");
   const [localTo, setLocalTo] = React.useState("");
+  // Cascata local (ordem por ID)
+  const [newSeqTpl, setNewSeqTpl] = React.useState<string>("");
 
   const selectableNumbers = React.useMemo(() => numbers.filter((n) => n.id !== currentId), [numbers, currentId]);
 

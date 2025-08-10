@@ -265,45 +265,8 @@ const handleWizardSaved = (data: ExtendedNumber) => {
                 </div>
 
                 <div className="space-y-2 mt-4">
-                  <Label>Templates de utilidade (ordem de execução)</Label>
-                  <div className="flex items-center gap-2">
-                    <Select value={newTpl} onValueChange={setNewTpl}>
-                      <SelectTrigger className="w-full md:w-[420px]"><SelectValue placeholder="Selecione pelo ID" /></SelectTrigger>
-                      <SelectContent>
-                        {catalog.length === 0 ? (
-                          <SelectItem value="__empty" disabled>Nenhum template no catálogo</SelectItem>
-                        ) : (
-                          catalog.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>{t.id} — {t.name}</SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <Button variant="secondary" onClick={addTemplate} disabled={!newTpl || newTpl === "__empty"}>Adicionar</Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Escolha pelo ID e ordene. A execução seguirá a ordem listada abaixo.</p>
-                  <div className="space-y-2 mt-2">
-                    {(form.utilityTemplates ?? []).length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Nenhum template na cadeia ainda.</p>
-                    ) : (
-                      (form.utilityTemplates ?? []).map((tpl, idx) => (
-                        <div key={tpl} className="flex items-center justify-between rounded-md border p-2">
-                          <div className="flex items-center">
-                            <span className="text-xs text-muted-foreground mr-2">#{idx + 1}</span>
-                            <span className="font-mono text-xs">{tpl}</span>
-                            {catalog.find((x) => x.id === tpl)?.name && (
-                              <span className="text-xs text-muted-foreground ml-2">— {catalog.find((x) => x.id === tpl)!.name}</span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button size="icon" variant="outline" onClick={() => moveUp(tpl)} aria-label="Subir"><ArrowUp className="h-4 w-4" /></Button>
-                            <Button size="icon" variant="outline" onClick={() => moveDown(tpl)} aria-label="Descer"><ArrowDown className="h-4 w-4" /></Button>
-                            <Button size="icon" variant="destructive" onClick={() => removeTemplate(tpl)} aria-label="Remover"><Trash2 className="h-4 w-4" /></Button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                  <Label>Cascata local de templates</Label>
+                  <p className="text-xs text-muted-foreground">Gerencie a ordem e equivalentes na aba “Templates equivalentes”.</p>
                 </div>
               </TabsContent>
 
@@ -312,6 +275,9 @@ const handleWizardSaved = (data: ExtendedNumber) => {
                   mappings={form.equivalentMappings ?? []}
                   numbers={items.map((n) => ({ id: n.id, label: n.label }))}
                   currentId={form.id}
+                  utilityTemplates={form.utilityTemplates ?? []}
+                  onUtilityChange={(next) => setForm((f) => ({ ...f, utilityTemplates: next }))}
+                  catalog={catalog}
                   onChange={(next) => setForm((f) => ({ ...f, equivalentMappings: next }))}
                 />
               </TabsContent>
