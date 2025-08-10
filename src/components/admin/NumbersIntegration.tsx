@@ -9,12 +9,13 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Badge } from "@/components/ui/badge";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { AVAILABLE_NUMBERS, NUMBERS_STORAGE_KEY, NumberInfo, NumberStatus, PoolMinQuality, loadAvailableNumbers } from "@/data/numbersPool";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NumberWizard from "@/components/admin/NumberWizard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TemplateMappingsTab from "@/components/admin/TemplateMappingsTab";
 import type { TemplateMapping } from "@/components/admin/types";
+import type { TemplateModel } from "@/components/templates/types";
 
 // Tipo estendido apenas para Admin (mantém compatibilidade com NumberInfo em outras telas)
 export type ExtendedNumber = NumberInfo & {
@@ -47,6 +48,8 @@ const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
 const [form, setForm] = React.useState<ExtendedNumber>({ id: "", label: "", quality: "HIGH", status: "ACTIVE", provider: "", wabaId: "", phoneId: "", tps: 10, utilityTemplates: [], equivalentMappings: [] });
 const [newTpl, setNewTpl] = React.useState("");
 const [wizardOpen, setWizardOpen] = React.useState(false);
+// Catálogo local de templates (para escolher pelo ID)
+const [catalog] = useLocalStorage<TemplateModel[]>("templates", []);
 
   // Seed inicial a partir do pool atual quando storage vazio
   React.useEffect(() => {
@@ -92,8 +95,13 @@ const handleWizardSaved = (data: ExtendedNumber) => {
 };
 
   const addTemplate = () => {
-    if (!newTpl.trim()) return;
-    setForm((f) => ({ ...f, utilityTemplates: [...(f.utilityTemplates ?? []), newTpl.trim()] }));
+    const id = newTpl.trim();
+    if (!id) return;
+    setForm((f) => {
+      const current = [...(f.utilityTemplates ?? [])];
+      if (!current.includes(id)) current.push(id);
+      return { ...f, utilityTemplates: current };
+    });
     setNewTpl("");
   };
 
@@ -101,6 +109,32 @@ const handleWizardSaved = (data: ExtendedNumber) => {
     setForm((f) => ({ ...f, utilityTemplates: (f.utilityTemplates ?? []).filter((t) => t !== tpl) }));
   };
 
+  const moveUp = (tpl: string) => {
+    setForm((f) => {
+      const arr = [...(f.utilityTemplates ?? [])];
+      const i = arr.indexOf(tpl);
+      if (i > 0) {
+        [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+      }
+      return { ...f, utilityTemplates: arr };
+    });
+  };
+
+  const moveDown = (tpl: string) => {
+    setForm((f) => {
+      const arr = [...(f.utilityTemplates ?? [])];
+      const i = arr.indexOf(tpl);
+      if (i !== -1 && i < arr.length - 1) {
+        [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]];
+      }
+      return { ...f, utilityTemplates: arr };
+    });
+  };
+
+  const tplLabel = (id: string) => {
+    const t = catalog.find((x) => x.id === id);
+    return t ? `${id} — ${t.name}` : id;
+  };
   return (
     <Card>
       <CardHeader>
@@ -231,18 +265,44 @@ const handleWizardSaved = (data: ExtendedNumber) => {
                 </div>
 
                 <div className="space-y-2 mt-4">
-                  <Label>Templates de utilidade (cadeia de fallback)</Label>
+                  <Label>Templates de utilidade (ordem de execução)</Label>
                   <div className="flex items-center gap-2">
-                    <Input value={newTpl} onChange={(e) => setNewTpl(e.target.value)} placeholder="ex.: util_1" />
-                    <Button variant="secondary" onClick={addTemplate}>Adicionar</Button>
+                    <Select value={newTpl} onValueChange={setNewTpl}>
+                      <SelectTrigger className="w-full md:w-[420px]"><SelectValue placeholder="Selecione pelo ID" /></SelectTrigger>
+                      <SelectContent>
+                        {catalog.length === 0 ? (
+                          <SelectItem value="__empty" disabled>Nenhum template no catálogo</SelectItem>
+                        ) : (
+                          catalog.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>{t.id} — {t.name}</SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <Button variant="secondary" onClick={addTemplate} disabled={!newTpl || newTpl === "__empty"}>Adicionar</Button>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {(form.utilityTemplates ?? []).map((tpl) => (
-                      <Badge key={tpl} variant="outline" className="flex items-center gap-2">
-                        {tpl}
-                        <button className="ml-1 text-xs" onClick={() => removeTemplate(tpl)}>x</button>
-                      </Badge>
-                    ))}
+                  <p className="text-xs text-muted-foreground">Escolha pelo ID e ordene. A execução seguirá a ordem listada abaixo.</p>
+                  <div className="space-y-2 mt-2">
+                    {(form.utilityTemplates ?? []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nenhum template na cadeia ainda.</p>
+                    ) : (
+                      (form.utilityTemplates ?? []).map((tpl, idx) => (
+                        <div key={tpl} className="flex items-center justify-between rounded-md border p-2">
+                          <div className="flex items-center">
+                            <span className="text-xs text-muted-foreground mr-2">#{idx + 1}</span>
+                            <span className="font-mono text-xs">{tpl}</span>
+                            {catalog.find((x) => x.id === tpl)?.name && (
+                              <span className="text-xs text-muted-foreground ml-2">— {catalog.find((x) => x.id === tpl)!.name}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button size="icon" variant="outline" onClick={() => moveUp(tpl)} aria-label="Subir"><ArrowUp className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="outline" onClick={() => moveDown(tpl)} aria-label="Descer"><ArrowDown className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="destructive" onClick={() => removeTemplate(tpl)} aria-label="Remover"><Trash2 className="h-4 w-4" /></Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </TabsContent>
