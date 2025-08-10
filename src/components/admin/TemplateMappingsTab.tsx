@@ -72,25 +72,103 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, cata
 
   const targetLabel = (id: string) => (id === currentId ? "Este número" : (numbers.find((n) => n.id === id)?.label ?? id));
 
+  // Cascata local (ordem por ID)
+  const addSeq = () => {
+    if (!newSeqTpl || newSeqTpl === "__empty") return;
+    const arr = [...utilityTemplates];
+    if (!arr.includes(newSeqTpl)) arr.push(newSeqTpl);
+    onUtilityChange(arr);
+    setNewSeqTpl("");
+  };
+  const removeSeq = (id: string) => onUtilityChange(utilityTemplates.filter((x) => x !== id));
+  const moveUp = (id: string) => {
+    const arr = [...utilityTemplates];
+    const i = arr.indexOf(id);
+    if (i > 0) {
+      [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+      onUtilityChange(arr);
+    }
+  };
+  const moveDown = (id: string) => {
+    const arr = [...utilityTemplates];
+    const i = arr.indexOf(id);
+    if (i !== -1 && i < arr.length - 1) {
+      [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]];
+      onUtilityChange(arr);
+    }
+  };
+  const tplName = (id: string) => catalog.find((t) => t.id === id)?.name;
+
   return (
     <div className="space-y-6">
-      {/* Equivalentes locais (mesmo número) */}
+      {/* Cascata local por IDs */}
       <div className="space-y-2">
-        <Label>Equivalentes locais (mesmo número)</Label>
+        <Label>Cascata local (mesmo número — por ID)</Label>
+        <div className="flex items-center gap-2">
+          <Select value={newSeqTpl} onValueChange={setNewSeqTpl}>
+            <SelectTrigger className="w-full md:w-[420px]"><SelectValue placeholder="Selecione o ID do template" /></SelectTrigger>
+            <SelectContent>
+              {catalog.length === 0 ? (
+                <SelectItem value="__empty" disabled>Nenhum template no catálogo</SelectItem>
+              ) : (
+                catalog.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.id} — {t.name}</SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          <Button variant="secondary" onClick={addSeq} disabled={!newSeqTpl || newSeqTpl === "__empty"}>Adicionar</Button>
+        </div>
+        <p className="text-xs text-muted-foreground">A tentativa seguirá a ordem abaixo. Gatilhos: RED/Paused/Disabled ou reclassificação para Marketing.</p>
+        <div className="space-y-2 mt-2">
+          {utilityTemplates.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum template na cascata ainda.</p>
+          ) : (
+            utilityTemplates.map((tpl, idx) => (
+              <div key={tpl} className="flex items-center justify-between rounded-md border p-2">
+                <div className="flex items-center">
+                  <span className="text-xs text-muted-foreground mr-2">#{idx + 1}</span>
+                  <span className="font-mono text-xs">{tpl}</span>
+                  {tplName(tpl) && (<span className="text-xs text-muted-foreground ml-2">— {tplName(tpl)}</span>)}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button size="icon" variant="outline" onClick={() => moveUp(tpl)} aria-label="Subir"><ArrowUp className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="outline" onClick={() => moveDown(tpl)} aria-label="Descer"><ArrowDown className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="destructive" onClick={() => removeSeq(tpl)} aria-label="Remover"><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Overrides específicos A→B (opcional) */}
+      <div className="space-y-2">
+        <Label>Overrides A→B (mesmo número, opcional)</Label>
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
           <div className="md:col-span-5">
-            <Label className="text-xs">Template utilitário</Label>
-            <Input placeholder="ex.: util_nota_fiscal" value={localFrom} onChange={(e) => setLocalFrom(e.target.value)} />
+            <Label className="text-xs">Quando usar</Label>
+            <Select value={localFrom} onValueChange={setLocalFrom}>
+              <SelectTrigger><SelectValue placeholder="Selecione o ID" /></SelectTrigger>
+              <SelectContent>
+                {catalog.map((t) => (<SelectItem key={t.id} value={t.id}>{t.id} — {t.name}</SelectItem>))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-6">
             <Label className="text-xs">Trocar para</Label>
-            <Input placeholder="ex.: util_nota_fiscal_b" value={localTo} onChange={(e) => setLocalTo(e.target.value)} />
+            <Select value={localTo} onValueChange={setLocalTo}>
+              <SelectTrigger><SelectValue placeholder="Selecione o ID" /></SelectTrigger>
+              <SelectContent>
+                {catalog.map((t) => (<SelectItem key={t.id} value={t.id}>{t.id} — {t.name}</SelectItem>))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-1">
             <Button className="w-full" variant="secondary" onClick={addLocalEquivalent}>Adicionar</Button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">Regra: ao detectar qualidade VERMELHA (RED), status Paused/Disabled ou reclassificação para Marketing, trocamos para o equivalente local primeiro — sem mudar de número.</p>
+        <p className="text-xs text-muted-foreground">Use overrides apenas quando um template específico exigir um próximo diferente da ordem padrão.</p>
 
         <div className="rounded-md border overflow-hidden">
           <Table>
@@ -104,7 +182,7 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, cata
             <TableBody>
               {localEquivalents.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">Nenhum equivalente local cadastrado.</TableCell>
+                  <TableCell colSpan={3} className="text-center text-sm text-muted-foreground">Nenhum override cadastrado.</TableCell>
                 </TableRow>
               ) : (
                 localEquivalents.map((m) => (
@@ -130,7 +208,12 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, cata
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
           <div className="md:col-span-4">
             <Label className="text-xs">Template local</Label>
-            <Input placeholder="ex.: promo_pt_BR" value={localTpl} onChange={(e) => setLocalTpl(e.target.value)} />
+            <Select value={localTpl} onValueChange={setLocalTpl}>
+              <SelectTrigger><SelectValue placeholder="Selecione o ID" /></SelectTrigger>
+              <SelectContent>
+                {catalog.map((t) => (<SelectItem key={t.id} value={t.id}>{t.id} — {t.name}</SelectItem>))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-4">
             <Label className="text-xs">Número destino</Label>
@@ -145,13 +228,18 @@ export default function TemplateMappingsTab({ mappings, currentId, numbers, cata
           </div>
           <div className="md:col-span-3">
             <Label className="text-xs">Template no destino</Label>
-            <Input placeholder="ex.: promo_b" value={targetTpl} onChange={(e) => setTargetTpl(e.target.value)} />
+            <Select value={targetTpl} onValueChange={setTargetTpl}>
+              <SelectTrigger><SelectValue placeholder="Selecione o ID" /></SelectTrigger>
+              <SelectContent>
+                {catalog.map((t) => (<SelectItem key={t.id} value={t.id}>{t.id} — {t.name}</SelectItem>))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-1">
             <Button className="w-full" variant="secondary" onClick={addMapping}>Adicionar</Button>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">Regra: primeiro tentamos equivalentes locais; o fallback entre números só deve ocorrer quando a qualidade global do número cair de HIGH (verde).</p>
+        <p className="text-xs text-muted-foreground">Primeiro executamos a cascata local; o fallback entre números só ocorre quando a qualidade do número cair de HIGH.</p>
 
         <div className="rounded-md border overflow-hidden">
           <Table>
