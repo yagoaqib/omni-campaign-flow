@@ -44,7 +44,7 @@ export const defaultCascadePolicyConfig: CascadePolicyConfig = {
   number_quotas: { num_A: 1000, num_B: 1000, num_C: 1000 },
   min_quality: "HIGH",
   template_stack_util: ["util_1", "util_2"],
-  template_stack_mkt: ["mkt_1", "mkt_2"],
+  template_stack_mkt: [],
   desired_category: "UTILITY",
   retry: { max: 3, backoffSec: 10 },
   per_number: {
@@ -309,16 +309,11 @@ export default function CascadePolicyEditor({ value, onChange }: Props) {
         </div>
 
         {/* Pilhas de templates */}
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-1 gap-4">
           <TemplateStackEditor
             title="Cadeia (UTILITY)"
             value={cfg.template_stack_util}
             onChange={(list) => setCfg((c) => ({ ...c, template_stack_util: list }))}
-          />
-          <TemplateStackEditor
-            title="Cadeia (MARKETING)"
-            value={cfg.template_stack_mkt}
-            onChange={(list) => setCfg((c) => ({ ...c, template_stack_mkt: list }))}
           />
         </div>
 
