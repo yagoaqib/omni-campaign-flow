@@ -55,7 +55,9 @@ export interface TemplateModel {
   wabaStatuses: WABAStatus[]
   examples?: TemplateExamples
   variableMap?: TemplateVariableMap
+  assignedNumberId?: string
 }
+
 
 
 export const defaultWABAs: { wabaId: string; phoneName: string }[] = [

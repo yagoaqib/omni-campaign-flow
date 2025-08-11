@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Plus, Trash2, Upload } from "lucide-react"
 import TemplatePreview from "./TemplatePreview"
 import { TemplateButton, TemplateButtonType, TemplateHeaderType, TemplateMedia, TemplateModel } from "./types"
+import { AVAILABLE_NUMBERS } from "@/data/numbersPool"
 
 function useFileAsDataUrl() {
   const [file, setFile] = React.useState<File | null>(null)
@@ -59,8 +60,9 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
   const media = useFileAsDataUrl()
   const [body, setBody] = React.useState(initial?.body ?? "Olá {{1}}, sua compra {{2}} foi aprovada!")
   const [footer, setFooter] = React.useState(initial?.footer ?? "")
-  const [buttons, setButtons] = React.useState<TemplateButton[]>(initial?.buttons ?? [])
-  const [variableValues, setVariableValues] = React.useState<Record<string, string>>({})
+const [buttons, setButtons] = React.useState<TemplateButton[]>(initial?.buttons ?? [])
+const [variableValues, setVariableValues] = React.useState<Record<string, string>>({})
+const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.assignedNumberId ?? "")
 
   const variableNumbers = React.useMemo(() => extractVariableNumbers(body), [body])
   const headerVariableNumbers = React.useMemo(
@@ -191,6 +193,7 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
         body: bodyVarKeys,
         header: headerType === "TEXT" && headerVariableNumbers.length ? headerVarKeys : undefined,
       },
+      assignedNumberId: assignedNumberId || undefined,
     }
     onSave(model)
   }
@@ -231,6 +234,23 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
                     <SelectItem value="MARKETING">Marketing</SelectItem>
                     <SelectItem value="TRANSACTIONAL">Transacional</SelectItem>
                     <SelectItem value="UTILITY">Utilidade</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label>Número/WABA</Label>
+                <Select value={assignedNumberId} onValueChange={(v) => setAssignedNumberId(v)}>
+                  <SelectTrigger className="z-50 bg-popover">
+                    <SelectValue placeholder="Selecione um número (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-popover">
+                    <SelectItem value="">Sem vínculo</SelectItem>
+                    {AVAILABLE_NUMBERS.map((n) => (
+                      <SelectItem key={n.id} value={n.id}>{n.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
