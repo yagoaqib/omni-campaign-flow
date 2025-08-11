@@ -1,1 +1,16 @@
 project_id = "ehqspernqapvxiijjkuk"
+
+[functions.preflight]
+verify_jwt = false
+
+[functions.eta]
+verify_jwt = false
+
+[functions.campaigns-start]
+verify_jwt = false
+
+[functions.dispatcher]
+verify_jwt = false
+
+[functions."webhooks-whatsapp"]
+verify_jwt = false

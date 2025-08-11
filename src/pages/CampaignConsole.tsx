@@ -6,16 +6,43 @@ import CascadePolicyEditor, { CascadePolicyConfig, defaultCascadePolicyConfig } 
 import { useEffect, useState } from "react";
 import { useOpsTabs } from "@/context/OpsTabsContext";
 import { useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CampaignConsole() {
   const { id } = useParams();
   const { openTab } = useOpsTabs();
   const [openPool, setOpenPool] = useState(false);
   const [policyConfig, setPolicyConfig] = useState<CascadePolicyConfig>(defaultCascadePolicyConfig);
+  const { toast } = useToast();
+  const [preflight, setPreflight] = useState<any>(null);
+  const [eta, setEta] = useState<any>(null);
 
   useEffect(() => {
     if (id) openTab({ id, type: "campaign", title: `Campanha ${id.slice(-4)}`, status: "Running", path: `/campaigns/${id}/console` });
   }, [id]);
+
+  const doPreflight = async () => {
+    if (!id) return;
+    const { data, error } = await supabase.functions.invoke('preflight', { body: { campaign_id: id } });
+    if (error) {
+      toast({ title: 'Pré-voo falhou', description: String((error as any).message || error), variant: 'destructive' } as any);
+    } else {
+      setPreflight(data);
+      toast({ title: 'Pré-voo ok', description: `Válidos: ${data.valid} • Sem WA: ${data.nowa}` } as any);
+    }
+  };
+
+  const doEta = async () => {
+    if (!id) return;
+    const { data, error } = await supabase.functions.invoke('eta', { body: { campaign_id: id } });
+    if (error) {
+      toast({ title: 'ETA falhou', description: String((error as any).message || error), variant: 'destructive' } as any);
+    } else {
+      setEta(data);
+      toast({ title: 'ETA calculada', description: `Total ~ ${data.etaTotalSec}s` } as any);
+    }
+  };
 
   return (
     <AppLayout>
@@ -28,6 +55,8 @@ export default function CampaignConsole() {
           <div className="flex gap-2">
             <Button variant="outline">Pausar</Button>
             <Button onClick={() => setOpenPool(true)}>Configurar Números e Sequência</Button>
+            <Button variant="outline" onClick={doPreflight}>Pré-voo</Button>
+            <Button variant="outline" onClick={doEta}>Calcular ETA</Button>
             <Button variant="outline">Exportar CSV</Button>
           </div>
         </div>
