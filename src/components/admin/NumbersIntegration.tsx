@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TemplateMappingsTab from "@/components/admin/TemplateMappingsTab";
 import type { TemplateMapping } from "@/components/admin/types";
 import type { TemplateModel } from "@/components/templates/types";
+import { Link } from "react-router-dom";
 
 // Tipo estendido apenas para Admin (mantém compatibilidade com NumberInfo em outras telas)
 export type ExtendedNumber = NumberInfo & {
@@ -141,154 +142,14 @@ const handleWizardSaved = (data: ExtendedNumber) => {
         <CardTitle>Integrações · Números</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-<div className="flex items-center justify-between gap-2">
-  <p className="text-muted-foreground">Cadastre os números (WABA/Phone ID), status/qualidade e templates de utilidade. Persistência local.</p>
-  <div className="flex items-center gap-2">
-    <Button variant="secondary" onClick={() => setWizardOpen(true)}>
-      <Plus className="h-4 w-4 mr-2" /> Novo número (Wizard)
-    </Button>
-  </div>
-</div>
-
-        <div className="rounded-md border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome/Label</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>WABA ID</TableHead>
-                <TableHead>Phone ID</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Qualidade</TableHead>
-                <TableHead>Templates util.</TableHead>
-                <TableHead className="w-[120px]">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((n, idx) => (
-                <TableRow key={n.id}>
-                  <TableCell className="font-medium">{n.label}</TableCell>
-                  <TableCell>{n.provider || "-"}</TableCell>
-                  <TableCell className="font-mono text-xs">{n.wabaId || "-"}</TableCell>
-                  <TableCell className="font-mono text-xs">{n.phoneId || "-"}</TableCell>
-                  <TableCell>
-                    <Select value={n.status} onValueChange={(v: NumberStatus) => updateInline(idx, { status: v })}>
-                      <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select value={n.quality} onValueChange={(v: PoolMinQuality) => updateInline(idx, { quality: v })}>
-                      <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {qualityOptions.map((q) => (
-                          <SelectItem key={q} value={q}>{q}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{(n.utilityTemplates?.length ?? 0)} itens</Badge>
-                  </TableCell>
-                  <TableCell className="space-x-2">
-                    <Button size="icon" variant="outline" onClick={() => openEdit(idx)} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="destructive" onClick={() => removeItem(idx)} aria-label="Excluir"><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-<NumberWizard open={wizardOpen} onOpenChange={setWizardOpen} onSave={handleWizardSaved} />
-
-<Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingIndex === null ? "Novo número" : "Editar número"}</DialogTitle>
-            </DialogHeader>
-
-            <Tabs defaultValue="geral" className="mt-1">
-              <TabsList>
-                <TabsTrigger value="geral">Geral</TabsTrigger>
-                <TabsTrigger value="equivalentes">Templates equivalentes</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="geral">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>ID</Label>
-                    <Input value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))} placeholder="ex.: num_X" />
-                  </div>
-                  <div>
-                    <Label>Label</Label>
-                    <Input value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} placeholder="ex.: Sender-06 (+55 61)" />
-                  </div>
-                  <div>
-                    <Label>Provider/BSP</Label>
-                    <Input value={form.provider ?? ""} onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))} placeholder="ex.: 360Dialog, Infobip" />
-                  </div>
-                  <div>
-                    <Label>WABA ID</Label>
-                    <Input value={form.wabaId ?? ""} onChange={(e) => setForm((f) => ({ ...f, wabaId: e.target.value }))} placeholder="ex.: 123456789" />
-                  </div>
-                  <div>
-                    <Label>Phone Number ID</Label>
-                    <Input value={form.phoneId ?? ""} onChange={(e) => setForm((f) => ({ ...f, phoneId: e.target.value }))} placeholder="ex.: 987654321" />
-                  </div>
-                  <div>
-                    <Label>TPS (opcional)</Label>
-                    <Input type="number" value={form.tps ?? 10} onChange={(e) => setForm((f) => ({ ...f, tps: Number(e.target.value || 0) }))} />
-                  </div>
-                  <div>
-                    <Label>Status</Label>
-                    <Select value={form.status} onValueChange={(v: NumberStatus) => setForm((f) => ({ ...f, status: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Qualidade</Label>
-                    <Select value={form.quality} onValueChange={(v: PoolMinQuality) => setForm((f) => ({ ...f, quality: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {qualityOptions.map((q) => (<SelectItem key={q} value={q}>{q}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2 mt-4">
-                  <Label>Cascata local de templates</Label>
-                  <p className="text-xs text-muted-foreground">Gerencie a ordem e equivalentes na aba “Templates equivalentes”.</p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="equivalentes">
-                <TemplateMappingsTab
-                  mappings={form.equivalentMappings ?? []}
-                  numbers={items.map((n) => ({ id: n.id, label: n.label }))}
-                  currentId={form.id}
-                  utilityTemplates={form.utilityTemplates ?? []}
-                  onUtilityChange={(next) => setForm((f) => ({ ...f, utilityTemplates: next }))}
-                  catalog={catalog}
-                  onChange={(next) => setForm((f) => ({ ...f, equivalentMappings: next }))}
-                />
-              </TabsContent>
-            </Tabs>
-
-<DialogFooter>
-  <Button onClick={saveForm}>Salvar</Button>
-</DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <p className="text-muted-foreground">
+          A gestão de números foi centralizada em <strong>Números &amp; Senders</strong>. Cadastre e edite números por lá.
+        </p>
+        <Link to="/senders">
+          <Button className="gap-2">Ir para Números &amp; Senders</Button>
+        </Link>
       </CardContent>
     </Card>
   );
 }
+

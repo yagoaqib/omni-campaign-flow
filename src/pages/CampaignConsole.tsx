@@ -2,6 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PoolEditor from "@/components/senders/PoolEditor";
+import CascadePolicyEditor, { CascadePolicyConfig, defaultCascadePolicyConfig } from "@/components/campaigns/CascadePolicyEditor";
 import { useEffect, useState } from "react";
 import { useOpsTabs } from "@/context/OpsTabsContext";
 import { useParams } from "react-router-dom";
@@ -10,6 +11,7 @@ export default function CampaignConsole() {
   const { id } = useParams();
   const { openTab } = useOpsTabs();
   const [openPool, setOpenPool] = useState(false);
+  const [policyConfig, setPolicyConfig] = useState<CascadePolicyConfig>(defaultCascadePolicyConfig);
 
   useEffect(() => {
     if (id) openTab({ id, type: "campaign", title: `Campanha ${id.slice(-4)}`, status: "Running", path: `/campaigns/${id}/console` });
@@ -57,6 +59,17 @@ export default function CampaignConsole() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Política de Disparo */}
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Política de Disparo</CardTitle></CardHeader>
+          <CardContent>
+            <CascadePolicyEditor value={policyConfig} onChange={setPolicyConfig} />
+            <p className="text-xs text-muted-foreground mt-2">
+              Alterações durante a execução: ordem aplica no próximo ciclo; qualidade mínima e fallback são imediatos; cotas afetam apenas o remanescente.
+            </p>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Problemas (últimos 5 min)</CardTitle></CardHeader>

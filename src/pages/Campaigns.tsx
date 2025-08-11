@@ -68,20 +68,14 @@ const Campaigns = () => {
               Gerencie suas campanhas de WhatsApp
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link to="/campaigns/new">
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Nova Campanha
-              </Button>
-            </Link>
-            <Link to="/campaigns/new?type=farm">
-              <Button variant="secondary" className="gap-2">
-                <Plus className="w-4 h-4" />
-                Criar Farm
-              </Button>
-            </Link>
-          </div>
+            <div className="flex items-center gap-2">
+              <Link to="/campaigns/new?type=farm" title="Conjunto reutilizável de números, cotas e cadeias de templates">
+                <Button variant="secondary" className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Grupos de Envio
+                </Button>
+              </Link>
+            </div>
         </div>
 
         {/* Campaigns Grid */}

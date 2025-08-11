@@ -67,29 +67,30 @@ export default function NumbersPerformancePanel() {
       {/* Control Panel */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-primary" />
-                Monitor de Performance em Tempo Real
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Acompanhe mensagens por segundo de cada número para otimizar disparos em volume
-              </p>
-            </div>
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              Monitor de Performance em Tempo Real
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Acompanhe mensagens por segundo de cada número para otimizar disparos em volume
+            </p>
+          </div>
+        </CardHeader>
+        
+        <CardContent>
+          <div className="flex items-center justify-center pb-4">
             <Button 
               onClick={toggleMonitoring}
               variant={isMonitoring ? "destructive" : "default"}
               className="gap-2"
             >
               <RefreshCw className={`w-4 h-4 ${isMonitoring ? "animate-spin" : ""}`} />
-              {isMonitoring ? "Parar" : "Iniciar"} Monitor
+              {isMonitoring ? "Parar monitoramento" : "Iniciar monitoramento"}
             </Button>
           </div>
-        </CardHeader>
-        
-        {isMonitoring && (
-          <CardContent>
+
+          {isMonitoring && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Total Rate */}
               <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5">
@@ -130,8 +131,14 @@ export default function NumbersPerformancePanel() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        )}
+          )}
+
+          {!isMonitoring && (
+            <div className="text-center text-sm text-muted-foreground py-6">
+              Monitor desativado. Inicie o monitoramento para ver as métricas em tempo real.
+            </div>
+          )}
+        </CardContent>
       </Card>
 
       {/* Performance Gauges */}
@@ -150,21 +157,6 @@ export default function NumbersPerformancePanel() {
         </div>
       )}
       
-      {!isMonitoring && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Zap className="w-12 h-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">Monitor Desativado</h3>
-            <p className="text-muted-foreground mb-4 max-w-md">
-              Clique em "Iniciar Monitor" para acompanhar a performance dos números em tempo real
-            </p>
-            <Button onClick={toggleMonitoring} variant="outline" className="gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Iniciar Monitoramento
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

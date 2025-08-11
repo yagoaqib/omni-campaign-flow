@@ -33,7 +33,7 @@ const mainNavItems = [
   { title: "Campanhas", url: "/campaigns", icon: MessageSquare },
   { title: "Templates", url: "/templates", icon: FileText },
   { title: "Contatos", url: "/contacts", icon: Users },
-  { title: "Números", url: "/senders", icon: Phone },
+  { title: "Números & Senders", url: "/senders", icon: Phone },
   { title: "Performance", url: "/performance", icon: Gauge },
   { title: "Relatórios", url: "/reports", icon: TrendingUp },
 ]
