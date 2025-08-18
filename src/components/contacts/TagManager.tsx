@@ -30,36 +30,16 @@ import {
   Heart,
   Star
 } from "lucide-react";
-import { useState } from "react";
-
-interface Tag {
-  id: string;
-  name: string;
-  color: string;
-  category: "funnel" | "behavior" | "custom";
-  description?: string;
-  contactCount: number;
-}
+import { useState, useEffect } from "react";
+import { ContactTag } from "@/hooks/useContactsManagement";
 
 interface TagManagerProps {
-  onTagsChange?: (tags: Tag[]) => void;
+  tags: ContactTag[];
+  onSaveTag: (tag: Omit<ContactTag, 'id' | 'created_at' | 'updated_at'>) => Promise<ContactTag | null>;
+  onUpdateTag: (tagId: string, updates: Partial<ContactTag>) => Promise<void>;
+  onDeleteTag: (tagId: string) => Promise<void>;
 }
 
-const defaultTags: Tag[] = [
-  // Funil de Vendas
-  { id: "lead", name: "Lead", color: "bg-blue-500", category: "funnel", description: "Contato inicial", contactCount: 1247 },
-  { id: "prospect", name: "Prospect", color: "bg-yellow-500", category: "funnel", description: "Interesse demonstrado", contactCount: 892 },
-  { id: "customer", name: "Cliente", color: "bg-green-500", category: "funnel", description: "Comprou pelo menos 1x", contactCount: 2156 },
-  { id: "vip", name: "VIP", color: "bg-purple-500", category: "funnel", description: "Cliente premium", contactCount: 234 },
-  
-  // Comportamento
-  { id: "engaged", name: "Engajado", color: "bg-emerald-500", category: "behavior", description: "Abre e interage", contactCount: 3421 },
-  { id: "cart_abandon", name: "Carrinho Abandonado", color: "bg-orange-500", category: "behavior", description: "Adicionou mas não comprou", contactCount: 756 },
-  { id: "inactive", name: "Inativo", color: "bg-gray-500", category: "behavior", description: "Sem interação há 30+ dias", contactCount: 445 },
-  
-  // Personalizadas
-  { id: "black_friday", name: "Black Friday 2024", color: "bg-red-500", category: "custom", description: "Campanha especial", contactCount: 1890 },
-];
 
 const tagColors = [
   "bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-green-500", 
@@ -73,57 +53,58 @@ const categoryIcons = {
   custom: <Star className="w-4 h-4" />
 };
 
-export function TagManager({ onTagsChange }: TagManagerProps) {
-  const [tags, setTags] = useState<Tag[]>(defaultTags);
+export function TagManager({ tags, onSaveTag, onUpdateTag, onDeleteTag }: TagManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [editingTag, setEditingTag] = useState<ContactTag | null>(null);
   const [newTag, setNewTag] = useState({
     name: "",
     color: "bg-blue-500",
-    category: "custom" as Tag["category"],
-    description: ""
+    category: "custom" as ContactTag["category"],
+    description: "",
+    contact_count: 0
   });
 
-  const saveTag = () => {
+  const saveTag = async () => {
     if (!newTag.name.trim()) return;
     
-    const tag: Tag = {
-      id: editingTag?.id || Date.now().toString(),
-      name: newTag.name,
-      color: newTag.color,
-      category: newTag.category,
-      description: newTag.description,
-      contactCount: editingTag?.contactCount || 0
-    };
-
     if (editingTag) {
-      setTags(tags.map(t => t.id === editingTag.id ? tag : t));
+      await onUpdateTag(editingTag.id, {
+        name: newTag.name,
+        color: newTag.color,
+        category: newTag.category,
+        description: newTag.description
+      });
     } else {
-      setTags([...tags, tag]);
+      await onSaveTag({
+        name: newTag.name,
+        color: newTag.color,
+        category: newTag.category,
+        description: newTag.description,
+        contact_count: 0
+      });
     }
 
     resetForm();
-    onTagsChange?.(tags);
   };
 
-  const deleteTag = (id: string) => {
-    setTags(tags.filter(t => t.id !== id));
-    onTagsChange?.(tags);
+  const deleteTagHandler = async (id: string) => {
+    await onDeleteTag(id);
   };
 
-  const editTag = (tag: Tag) => {
+  const editTag = (tag: ContactTag) => {
     setEditingTag(tag);
     setNewTag({
       name: tag.name,
       color: tag.color,
       category: tag.category,
-      description: tag.description || ""
+      description: tag.description || "",
+      contact_count: tag.contact_count
     });
     setIsDialogOpen(true);
   };
 
   const resetForm = () => {
-    setNewTag({ name: "", color: "bg-blue-500", category: "custom", description: "" });
+    setNewTag({ name: "", color: "bg-blue-500", category: "custom", description: "", contact_count: 0 });
     setEditingTag(null);
     setIsDialogOpen(false);
   };
@@ -141,7 +122,7 @@ export function TagManager({ onTagsChange }: TagManagerProps) {
     if (!acc[tag.category]) acc[tag.category] = [];
     acc[tag.category].push(tag);
     return acc;
-  }, {} as Record<string, Tag[]>);
+  }, {} as Record<string, ContactTag[]>);
 
   return (
     <Card>
@@ -179,7 +160,7 @@ export function TagManager({ onTagsChange }: TagManagerProps) {
                   <Label htmlFor="tagCategory">Categoria</Label>
                   <Select 
                     value={newTag.category} 
-                    onValueChange={(value: Tag["category"]) => setNewTag({...newTag, category: value})}
+                    onValueChange={(value: ContactTag["category"]) => setNewTag({...newTag, category: value})}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -254,7 +235,7 @@ export function TagManager({ onTagsChange }: TagManagerProps) {
                       <p className="text-sm text-muted-foreground">{tag.description}</p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {tag.contactCount.toLocaleString()} contatos
+                      {tag.contact_count.toLocaleString()} contatos
                     </p>
                   </div>
                   
@@ -270,7 +251,7 @@ export function TagManager({ onTagsChange }: TagManagerProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => deleteTag(tag.id)}
+                      onClick={() => deleteTagHandler(tag.id)}
                       className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="w-3 h-3" />

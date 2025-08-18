@@ -29,17 +29,21 @@ import {
   Plus
 } from "lucide-react";
 import { useState } from "react";
-import { Contact } from "@/hooks/useContacts";
+import { ContactTag } from "@/hooks/useContactsManagement";
 
-interface Tag {
+interface Contact {
   id: string;
-  name: string;
-  color: string;
-  category: "funnel" | "behavior" | "custom";
+  name?: string;
+  phone: string;
+  email?: string;
+  source: string;
+  hasWhatsapp: boolean;
+  lastContact?: string;
+  tags: string[];
 }
 
 interface ContactTaggingProps {
-  tags: Tag[];
+  tags: ContactTag[];
   contacts: Contact[];
   onContactUpdate?: (contactId: string, newTags: string[]) => void;
 }
@@ -55,7 +59,7 @@ export function ContactTagging({ tags, contacts: initialContacts, onContactUpdat
   const tagMap = tags.reduce((acc, tag) => {
     acc[tag.id] = tag;
     return acc;
-  }, {} as Record<string, Tag>);
+  }, {} as Record<string, ContactTag>);
 
   // Filtrar contatos
   const filteredContacts = contacts.filter(contact => {

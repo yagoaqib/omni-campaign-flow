@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Eye, RefreshCw, Edit3 } from "lucide-react"
 import { TemplateModel } from "./types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { loadAvailableNumbers } from "@/data/numbersPool"
+import { usePhoneNumbersForTemplates } from "@/hooks/usePhoneNumbersForTemplates"
 
 interface Props {
   templates: TemplateModel[]
@@ -22,9 +22,9 @@ function getStatusTag(t: TemplateModel) {
 }
 
 export default function TemplateList({ templates, onEdit, onSync }: Props) {
-  const numbers = loadAvailableNumbers()
+  const { phoneNumbers, loading } = usePhoneNumbersForTemplates()
   const [filterId, setFilterId] = React.useState<string>("all")
-  const getNumberLabel = (id?: string) => numbers.find((n) => n.id === id)?.label ?? "—"
+  const getNumberLabel = (id?: string) => phoneNumbers.find((n) => n.id === id)?.label ?? "—"
   const list = React.useMemo(
     () => templates.filter((t) => (filterId === "all" ? true : t.assignedNumberId === filterId)),
     [templates, filterId]
@@ -38,7 +38,7 @@ export default function TemplateList({ templates, onEdit, onSync }: Props) {
           <SelectTrigger className="w-64"><SelectValue placeholder="Todos" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {numbers.map((n) => (
+            {phoneNumbers.map((n) => (
               <SelectItem key={n.id} value={n.id}>{n.label}</SelectItem>
             ))}
           </SelectContent>

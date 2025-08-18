@@ -17,6 +17,7 @@ import { HelpCircle } from "lucide-react";
 import { createMetaApi } from "@/services/metaApi";
 import { createInfobipApi } from "@/services/infobipApi";
 import { createGupshupApi } from "@/services/gupshupApi";
+import { supabase } from "@/integrations/supabase/client";
 
 // Tipos auxiliares
 type Provider = "meta" | "infobip" | "gupshup";
@@ -265,9 +266,46 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
   };
 
   const resendWebhook = async () => {
-    await new Promise((r) => setTimeout(r, 600));
-    setWebhookOk(true);
-    toast({ title: "Webhook verificado", description: "Assinatura verificada (simulado)." });
+    if (provider !== "meta") {
+      toast({ title: "Webhook", description: "Verificação disponível apenas para Meta Cloud", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setWebhookOk(null);
+      
+      // Usar a função edge para verificar o webhook real
+      const { data, error } = await supabase.functions.invoke('webhook-verify', {
+        body: {
+          webhookUrl: 'https://your-webhook-url.com/webhook', // TODO: usar URL real do projeto
+          verifyToken: 'your-verify-token' // TODO: usar token real
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setWebhookOk(true);
+        toast({ 
+          title: "Webhook verificado", 
+          description: data.message || "Webhook verificado com sucesso"
+        });
+      } else {
+        setWebhookOk(false);
+        toast({ 
+          title: "Falha na verificação", 
+          description: data.error || "Webhook não pôde ser verificado",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      setWebhookOk(false);
+      toast({ 
+        title: "Erro na verificação", 
+        description: error instanceof Error ? error.message : "Falha ao verificar webhook",
+        variant: "destructive" 
+      });
+    }
   };
 
   const handleSave = async () => {

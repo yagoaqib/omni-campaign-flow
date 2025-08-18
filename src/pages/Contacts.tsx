@@ -8,38 +8,32 @@ import { NumberValidation } from "@/components/contacts/NumberValidation"
 import { TagManager } from "@/components/contacts/TagManager"
 import { ContactTagging } from "@/components/contacts/ContactTagging"
 import { useState } from "react"
-import { useContacts } from "@/hooks/useContacts"
+import { useContactsManagement } from "@/hooks/useContactsManagement"
 
 const Contacts = () => {
-  const [tags, setTags] = useState([]);
-  const { contacts, contactLists, totalStats, loading, createContactList } = useContacts();
+  const { 
+    tags, 
+    contacts, 
+    contactLists, 
+    totalStats, 
+    loading, 
+    saveTag,
+    updateTag,
+    deleteTag,
+    updateContactTags,
+    createContactList 
+  } = useContactsManagement();
 
-  const recentContacts = [
-    {
-      phone: "+55 11 99999-9999",
-      name: "João Silva",
-      email: "joao@email.com",
-      tags: ["premium", "vip"],
-      hasWhatsapp: true,
-      lastContact: "2 min atrás"
-    },
-    {
-      phone: "+55 21 88888-8888", 
-      name: "Maria Santos",
-      email: "maria@email.com",
-      tags: ["newsletter"],
-      hasWhatsapp: true,
-      lastContact: "15 min atrás"
-    },
-    {
-      phone: "+55 85 77777-7777",
-      name: "Pedro Costa",
-      email: "pedro@email.com", 
-      tags: ["abandoned"],
-      hasWhatsapp: false,
-      lastContact: "1 hora atrás"
-    }
-  ]
+  // Pegar os contatos mais recentes (limitado a 10)
+  const recentContacts = contacts.slice(0, 10).map(contact => ({
+    id: contact.id,
+    phone: contact.phone,
+    name: contact.name || "Sem nome",
+    email: contact.email || "",
+    tags: contact.tags,
+    hasWhatsapp: contact.has_whatsapp,
+    lastContact: contact.last_contact ? new Date(contact.last_contact).toLocaleString() : "Nunca"
+  }));
 
   return (
     <AppLayout>
@@ -144,14 +138,7 @@ const Contacts = () => {
                       </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {list.contacts.toLocaleString()} contatos • {list.lastUpdated}
-                    </div>
-                    <div className="flex gap-1">
-                      {list.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
+                      {list.contact_count.toLocaleString()} contatos • {new Date(list.updated_at).toLocaleDateString()}
                     </div>
                   </div>
                   <Button variant="ghost" size="sm">
@@ -208,14 +195,26 @@ const Contacts = () => {
         </div>
 
         {/* Tag Management */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TagManager onTagsChange={setTags} />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <TagManager 
+            tags={tags}
+            onSaveTag={saveTag}
+            onUpdateTag={updateTag}
+            onDeleteTag={deleteTag}
+          />
           <ContactTagging 
             tags={tags}
-            contacts={contacts}
-            onContactUpdate={(contactId, newTags) => 
-              console.log(`Contact ${contactId} updated with tags:`, newTags)
-            } 
+            contacts={contacts.map(c => ({
+              id: c.id,
+              name: c.name,
+              phone: c.phone,
+              email: c.email,
+              source: c.source,
+              hasWhatsapp: c.has_whatsapp,
+              lastContact: c.last_contact,
+              tags: c.tags
+            }))}
+            onContactUpdate={updateContactTags}
           />
         </div>
 

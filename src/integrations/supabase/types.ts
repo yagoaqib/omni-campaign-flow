@@ -210,6 +210,153 @@ export type Database = {
           },
         ]
       }
+      contact_list_assignments: {
+        Row: {
+          assigned_at: string
+          contact_id: string
+          id: string
+          list_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          contact_id: string
+          id?: string
+          list_id: string
+        }
+        Update: {
+          assigned_at?: string
+          contact_id?: string
+          id?: string
+          list_id?: string
+        }
+        Relationships: []
+      }
+      contact_lists: {
+        Row: {
+          contact_count: number
+          created_at: string
+          id: string
+          name: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          contact_count?: number
+          created_at?: string
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          contact_count?: number
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      contact_tag_assignments: {
+        Row: {
+          assigned_at: string
+          contact_id: string
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          contact_id: string
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          assigned_at?: string
+          contact_id?: string
+          id?: string
+          tag_id?: string
+        }
+        Relationships: []
+      }
+      contact_tags: {
+        Row: {
+          category: string
+          color: string
+          contact_count: number
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          category?: string
+          color?: string
+          contact_count?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          category?: string
+          color?: string
+          contact_count?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          has_whatsapp: boolean
+          id: string
+          last_contact: string | null
+          name: string | null
+          phone: string
+          source: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          has_whatsapp?: boolean
+          id?: string
+          last_contact?: string | null
+          name?: string | null
+          phone: string
+          source?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          has_whatsapp?: boolean
+          id?: string
+          last_contact?: string | null
+          name?: string | null
+          phone?: string
+          source?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       dispatch_jobs: {
         Row: {
           attempts: number
