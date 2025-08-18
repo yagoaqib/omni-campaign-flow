@@ -24,16 +24,19 @@ const Contacts = () => {
     createContactList 
   } = useContactsManagement();
 
-  // Pegar os contatos mais recentes (limitado a 10)
-  const recentContacts = contacts.slice(0, 10).map(contact => ({
-    id: contact.id,
-    phone: contact.phone,
-    name: contact.name || "Sem nome",
-    email: contact.email || "",
-    tags: contact.tags,
-    hasWhatsapp: contact.has_whatsapp,
-    lastContact: contact.last_contact ? new Date(contact.last_contact).toLocaleString() : "Nunca"
-  }));
+  // Pegar os 3 contatos mais recentes da base de dados
+  const recentContacts = contacts
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 3)
+    .map(contact => ({
+      id: contact.id,
+      phone: contact.phone,
+      name: contact.name || "Sem nome",
+      email: contact.email || "",
+      tags: contact.tags,
+      hasWhatsapp: contact.has_whatsapp,
+      lastContact: contact.last_contact ? new Date(contact.last_contact).toLocaleString() : "Nunca"
+    }));
 
   return (
     <AppLayout>
@@ -164,7 +167,14 @@ const Contacts = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {recentContacts.map((contact, index) => (
+              {recentContacts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>Nenhum contato encontrado</p>
+                  <p className="text-sm">Importe contatos para começar</p>
+                </div>
+              ) : (
+                recentContacts.map((contact, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -189,7 +199,7 @@ const Contacts = () => {
                     Detalhes
                   </Button>
                 </div>
-              ))}
+              )))}
             </CardContent>
           </Card>
         </div>

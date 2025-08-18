@@ -38,18 +38,26 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Load campaign numbers in order
+    // Load campaign numbers with randomization for load balancing
     const { data: cnums, error: cnErr } = await supabase
       .from('campaign_numbers')
       .select('phone_number_ref, pos, quota, min_quality')
       .eq('campaign_id', campaign_id)
       .order('pos', { ascending: true });
+    
+    // Shuffle numbers for load balancing
+    if (cnums && cnums.length > 1) {
+      for (let i = cnums.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cnums[i], cnums[j]] = [cnums[j], cnums[i]];
+      }
+    }
     if (cnErr) throw cnErr;
 
     const numberIds = (cnums ?? []).map((n: any) => n.phone_number_ref);
     const { data: numbers, error: pnErr } = await supabase
       .from('phone_numbers')
-      .select('id, mps_target, quality_rating, status')
+      .select('id, mps_target, quality_rating, status, phone_number_id, waba_ref')
       .in('id', numberIds.length ? numberIds : ['00000000-0000-0000-0000-000000000000']);
     if (pnErr) throw pnErr;
     const numMap = new Map(numbers?.map((n: any) => [n.id, n]) ?? []);
@@ -63,9 +71,10 @@ Deno.serve(async (req) => {
     // Fetch a small batch of queued jobs to assign/send
     const { data: jobs, error: jobsErr } = await supabase
       .from('dispatch_jobs')
-      .select('id')
+      .select('id, attempts')
       .eq('campaign_id', campaign_id)
       .eq('status', 'QUEUED')
+      .lt('attempts', 3) // Only retry up to 3 times
       .limit(capacity);
     if (jobsErr) throw jobsErr;
 
@@ -91,8 +100,97 @@ Deno.serve(async (req) => {
         if (qualityRank(meta.quality_rating) < qualityRank(n.min_quality)) continue;
         if (!canSend(meta.id, Math.max(1, meta.mps_target || 1))) continue;
 
-        // Stub: mark as SENT and assign number; in real impl, call Meta API with client_msg_id
-        updates.push({ id: job.id, phone_number_ref: meta.id, status: 'SENT', sent_at: new Date().toISOString(), last_status_at: new Date().toISOString() });
+        // Real Meta API call
+        try {
+          // Get full job details
+          const { data: fullJob } = await supabase
+            .from('dispatch_jobs')
+            .select('audience_item_id, template_ref, campaign_id')
+            .eq('id', job.id)
+            .single();
+
+          // Get recipient details
+          const { data: audienceItem } = await supabase
+            .from('audience_items')
+            .select('wa_id, e164')
+            .eq('id', fullJob.audience_item_id)
+            .single();
+
+          // Get template details
+          const { data: template } = await supabase
+            .from('message_templates')
+            .select('name, components_schema')
+            .eq('id', fullJob.template_ref)
+            .single();
+
+          // Get WABA details
+          const { data: phoneNumber } = await supabase
+            .from('phone_numbers')
+            .select('phone_number_id, waba_ref')
+            .eq('id', meta.id)
+            .single();
+
+          const { data: waba } = await supabase
+            .from('wabas')
+            .select('access_token')
+            .eq('id', phoneNumber.waba_ref)
+            .single();
+
+          // Send message via Meta API
+          const messagePayload = {
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to: audienceItem.wa_id || audienceItem.e164,
+            type: "template",
+            template: {
+              name: template.name,
+              language: { code: "pt_BR" },
+              components: template.components_schema
+            }
+          };
+
+          const metaResponse = await fetch(`https://graph.facebook.com/v19.0/${phoneNumber.phone_number_id}/messages`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${waba.access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(messagePayload)
+          });
+
+          const metaResult = await metaResponse.json();
+
+          if (metaResponse.ok && metaResult.messages?.[0]?.id) {
+            updates.push({ 
+              id: job.id, 
+              phone_number_ref: meta.id, 
+              status: 'SENT', 
+              client_msg_id: metaResult.messages[0].id,
+              sent_at: new Date().toISOString(), 
+              last_status_at: new Date().toISOString() 
+            });
+          } else {
+            // Handle API error - mark for retry or failure
+            updates.push({ 
+              id: job.id, 
+              phone_number_ref: meta.id, 
+              status: 'FAILED', 
+              error_code: metaResult.error?.code || 'UNKNOWN_ERROR',
+              attempts: (job.attempts || 0) + 1,
+              last_status_at: new Date().toISOString() 
+            });
+          }
+        } catch (error) {
+          console.error('Error sending message:', error);
+          updates.push({ 
+            id: job.id, 
+            phone_number_ref: meta.id, 
+            status: 'FAILED', 
+            error_code: 'API_ERROR',
+            attempts: (job.attempts || 0) + 1,
+            last_status_at: new Date().toISOString() 
+          });
+        }
         processed++;
         break;
       }

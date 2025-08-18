@@ -8,7 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { AVAILABLE_NUMBERS, NUMBERS_STORAGE_KEY, NumberInfo, NumberStatus, PoolMinQuality, loadAvailableNumbers } from "@/data/numbersPool";
+import { useAvailableNumbers, AvailableNumber } from "@/hooks/useAvailableNumbers";
+
+type NumberStatus = "ACTIVE" | "PAUSED" | "BLOCKED";
+type PoolMinQuality = "HIGH" | "MEDIUM" | "LOW";
+const NUMBERS_STORAGE_KEY = "numbers_pool_v1";
 import { Plus, Pencil, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NumberWizard from "@/components/admin/NumberWizard";
@@ -18,8 +22,8 @@ import type { TemplateMapping } from "@/components/admin/types";
 import type { TemplateModel } from "@/components/templates/types";
 import { Link } from "react-router-dom";
 
-// Tipo estendido apenas para Admin (mantém compatibilidade com NumberInfo em outras telas)
-export type ExtendedNumber = NumberInfo & {
+// Tipo estendido apenas para Admin (mantém compatibilidade com AvailableNumber em outras telas)
+export type ExtendedNumber = AvailableNumber & {
   provider?: string;
   wabaId?: string;
   phoneId?: string;
@@ -46,19 +50,28 @@ export default function NumbersIntegration() {
   const [items, setItems] = useLocalStorage<ExtendedNumber[]>(NUMBERS_STORAGE_KEY, []);
 const [open, setOpen] = React.useState(false);
 const [editingIndex, setEditingIndex] = React.useState<number | null>(null);
-const [form, setForm] = React.useState<ExtendedNumber>({ id: "", label: "", quality: "HIGH", status: "ACTIVE", provider: "", wabaId: "", phoneId: "", tps: 10, utilityTemplates: [], equivalentMappings: [] });
+  const [form, setForm] = React.useState<ExtendedNumber>({ 
+    id: "", 
+    label: "", 
+    quality: "HIGH", 
+    status: "ACTIVE", 
+    displayNumber: "",
+    mpsTarget: 80,
+    provider: "", 
+    wabaId: "", 
+    phoneId: "", 
+    tps: 10, 
+    utilityTemplates: [], 
+    equivalentMappings: [] 
+  });
 const [newTpl, setNewTpl] = React.useState("");
 const [wizardOpen, setWizardOpen] = React.useState(false);
 // Catálogo local de templates (para escolher pelo ID)
 const [catalog] = useLocalStorage<TemplateModel[]>("templates", []);
 
-  // Seed inicial a partir do pool atual quando storage vazio
+  // Remover inicialização automática - agora é manual via wizard
   React.useEffect(() => {
-    if (!items || items.length === 0) {
-      const base = (loadAvailableNumbers?.() ?? AVAILABLE_NUMBERS).map((n) => ({ ...n, provider: "", wabaId: "", phoneId: "", tps: 10, utilityTemplates: [] as string[], equivalentMappings: [] as TemplateMapping[] }));
-      setItems(base);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Removido: seed automático do pool local
   }, []);
 
   const openEdit = (idx: number) => {

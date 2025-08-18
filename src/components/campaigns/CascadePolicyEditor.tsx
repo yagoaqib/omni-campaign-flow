@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import * as React from "react";
 import { GripVertical } from "lucide-react";
-import { AVAILABLE_NUMBERS } from "@/data/numbersPool";
+import { useAvailableNumbers } from "@/hooks/useAvailableNumbers";
 
 export type MinQuality = "HIGH" | "MEDIUM" | "LOW";
 export type DesiredCategory = "UTILITY" | "MARKETING";
@@ -78,6 +78,7 @@ interface Props {
 }
 
 export default function CascadePolicyEditor({ value, onChange }: Props) {
+  const { numbers: AVAILABLE_NUMBERS } = useAvailableNumbers();
   const [cfg, setCfg] = React.useState<CascadePolicyConfig>(value ?? defaultCascadePolicyConfig);
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
 

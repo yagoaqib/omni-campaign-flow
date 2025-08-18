@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Plus, Trash2, Upload } from "lucide-react"
 import TemplatePreview from "./TemplatePreview"
 import { TemplateButton, TemplateButtonType, TemplateHeaderType, TemplateMedia, TemplateModel } from "./types"
-import { AVAILABLE_NUMBERS } from "@/data/numbersPool"
+import { useAvailableNumbers } from "@/hooks/useAvailableNumbers"
 
 function useFileAsDataUrl() {
   const [file, setFile] = React.useState<File | null>(null)
@@ -50,6 +50,7 @@ interface BuilderProps {
 }
 
 export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
+  const { numbers: AVAILABLE_NUMBERS } = useAvailableNumbers();
   const [name, setName] = React.useState(initial?.name ?? "")
   const [language, setLanguage] = React.useState(initial?.language ?? "pt_BR")
   const [category, setCategory] = React.useState<"MARKETING" | "TRANSACTIONAL" | "UTILITY">(

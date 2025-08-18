@@ -457,6 +457,45 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          category: string
+          components_schema: Json
+          created_at: string
+          id: string
+          language: string
+          name: string
+          status: string
+          updated_at: string
+          waba_id: string
+          workspace_id: string
+        }
+        Insert: {
+          category?: string
+          components_schema?: Json
+          created_at?: string
+          id?: string
+          language?: string
+          name: string
+          status?: string
+          updated_at?: string
+          waba_id: string
+          workspace_id: string
+        }
+        Update: {
+          category?: string
+          components_schema?: Json
+          created_at?: string
+          id?: string
+          language?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          waba_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       phone_numbers: {
         Row: {
           created_at: string | null

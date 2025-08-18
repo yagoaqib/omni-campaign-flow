@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Eye, RefreshCw, Edit3 } from "lucide-react"
 import { TemplateModel } from "./types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { usePhoneNumbersForTemplates } from "@/hooks/usePhoneNumbersForTemplates"
+import { useAvailableNumbers } from "@/hooks/useAvailableNumbers"
 
 interface Props {
   templates: TemplateModel[]
@@ -22,7 +22,7 @@ function getStatusTag(t: TemplateModel) {
 }
 
 export default function TemplateList({ templates, onEdit, onSync }: Props) {
-  const { phoneNumbers, loading } = usePhoneNumbersForTemplates()
+  const { numbers: phoneNumbers, loading } = useAvailableNumbers()
   const [filterId, setFilterId] = React.useState<string>("all")
   const getNumberLabel = (id?: string) => phoneNumbers.find((n) => n.id === id)?.label ?? "—"
   const list = React.useMemo(

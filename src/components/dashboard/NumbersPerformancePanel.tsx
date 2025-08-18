@@ -4,15 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Zap, TrendingUp, AlertTriangle, RefreshCw } from "lucide-react";
 import MessageRateGauge from "./MessageRateGauge";
-import { AVAILABLE_NUMBERS, type NumberInfo } from "@/data/numbersPool";
+import { useAvailableNumbers, type AvailableNumber } from "@/hooks/useAvailableNumbers";
 
-interface NumberPerformance extends NumberInfo {
+interface NumberPerformance {
+  id: string;
+  label: string;
+  quality: 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'ACTIVE' | 'PAUSED' | 'BLOCKED';
+  displayNumber: string;
+  mpsTarget: number;
   messagesPerSecond: number;
   totalSent: number;
   lastUpdated: string;
 }
 
 export default function NumbersPerformancePanel() {
+  const { numbers: availableNumbers } = useAvailableNumbers();
   const [performances, setPerformances] = React.useState<NumberPerformance[]>([]);
   const [isMonitoring, setIsMonitoring] = React.useState(false);
 
@@ -24,7 +31,7 @@ export default function NumbersPerformancePanel() {
     }
 
     // Initialize with available numbers
-    const initPerformances = AVAILABLE_NUMBERS.map(num => ({
+    const initPerformances = availableNumbers.map(num => ({
       ...num,
       messagesPerSecond: 0,
       totalSent: 0,
