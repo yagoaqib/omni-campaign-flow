@@ -10,12 +10,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOpsTabs } from "@/context/OpsTabsContext";
+import { useCampaigns } from "@/hooks/useCampaigns";
+import { useContacts } from "@/hooks/useContacts";
+import { usePhoneNumbers } from "@/hooks/usePhoneNumbers";
+import { useToast } from "@/hooks/use-toast";
 
 import CascadePolicyEditor, { CascadePolicyConfig, defaultCascadePolicyConfig } from "@/components/campaigns/CascadePolicyEditor";
-import { AVAILABLE_NUMBERS } from "@/data/numbersPool";
 
 export default function CampaignCreate() {
   const [step, setStep] = useState(1);
+  const [campaignName, setCampaignName] = useState("");
+  const [selectedAudience, setSelectedAudience] = useState<string>("");
   const [autoBalance, setAutoBalance] = useState(true);
   const [tps, setTps] = useState<number[]>([20]);
   const [cascadeConfig, setCascadeConfig] = useState<CascadePolicyConfig>(defaultCascadePolicyConfig);
@@ -29,6 +34,10 @@ export default function CampaignCreate() {
 
   const navigate = useNavigate();
   const { openTab } = useOpsTabs();
+  const { createCampaign } = useCampaigns();
+  const { contactLists: audiences } = useContacts();
+  const { phoneNumbers } = usePhoneNumbers();
+  const { toast } = useToast();
 
   const [searchParams] = useSearchParams();
   const initialType = (searchParams.get("type") as "template" | "session" | "farm") ?? "template";
@@ -99,11 +108,38 @@ export default function CampaignCreate() {
   const next = () => setStep((s) => Math.min(4, s + 1));
   const prev = () => setStep((s) => Math.max(1, s - 1));
 
-  const launch = () => {
-    const id = String(Date.now());
-    const path = `/campaigns/${id}/console`;
-    openTab({ id, type: "campaign", title: `Campanha ${id.slice(-4)}`, status: "Running", path });
-    navigate(path);
+  const launch = async () => {
+    if (!campaignName.trim()) {
+      toast({ title: "Erro", description: "Nome da campanha é obrigatório.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const campaign = await createCampaign(
+        campaignName,
+        "", // workspaceId will be set in hook
+        selectedAudience || undefined,
+        campaignType === "template" ? "MARKETING" : "UTILITY"
+      );
+
+      const path = `/campaigns/${campaign.id}/console`;
+      openTab({ 
+        id: campaign.id, 
+        type: "campaign", 
+        title: `Campanha ${campaignName}`, 
+        status: "Running", 
+        path 
+      });
+      navigate(path);
+      
+      toast({ title: "Sucesso", description: "Campanha criada com sucesso!" });
+    } catch (error) {
+      toast({ 
+        title: "Erro", 
+        description: "Falha ao criar campanha.", 
+        variant: "destructive" 
+      });
+    }
   };
 
   return (
@@ -130,7 +166,11 @@ export default function CampaignCreate() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label>Nome</Label>
-                  <Input placeholder="Black Friday 2025" />
+                  <Input 
+                    placeholder="Black Friday 2025" 
+                    value={campaignName}
+                    onChange={(e) => setCampaignName(e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label>Tipo</Label>
@@ -206,7 +246,7 @@ export default function CampaignCreate() {
                   <div className="space-y-2">
                     <Label>Escolha até 10 números <span className="text-xs text-muted-foreground">({selectedIds.length}/10)</span></Label>
                     <div className="rounded-md border divide-y">
-                      {AVAILABLE_NUMBERS.map((n) => {
+                      {phoneNumbers.map((n) => {
                         const checked = selectedIds.includes(n.id);
                         const disabled = !checked && selectedIds.length >= 10;
                         return (
@@ -214,8 +254,8 @@ export default function CampaignCreate() {
                             <div className="flex items-center gap-2">
                               <Checkbox checked={checked} onCheckedChange={() => toggleNumber(n.id)} disabled={disabled} />
                               <div>
-                                <div className="font-medium">{n.label}</div>
-                                <div className="text-xs text-muted-foreground">Qualidade {n.quality} • {n.status}</div>
+                                <div className="font-medium">{n.display_number}</div>
+                                <div className="text-xs text-muted-foreground">Qualidade {n.quality_rating} • {n.status}</div>
                               </div>
                             </div>
                             {checked && (
@@ -237,7 +277,7 @@ export default function CampaignCreate() {
                           </label>
                         );
                       })}
-                      {AVAILABLE_NUMBERS.length === 0 && <div className="p-2 text-sm text-muted-foreground">Sem números disponíveis</div>}
+                      {phoneNumbers.length === 0 && <div className="p-2 text-sm text-muted-foreground">Sem números disponíveis</div>}
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -313,10 +353,14 @@ export default function CampaignCreate() {
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
                   <Label>Listas</Label>
-                  <Select defaultValue="lista1">
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <Select value={selectedAudience} onValueChange={setSelectedAudience}>
+                    <SelectTrigger><SelectValue placeholder="Selecione uma lista" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="lista1">Clientes BR</SelectItem>
+                      {audiences.map((audience) => (
+                        <SelectItem key={audience.id} value={audience.id}>
+                          {audience.name} ({audience.total} contatos)
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -354,12 +398,12 @@ export default function CampaignCreate() {
                       ? selectedIds
                           .filter((id) => (allocations[id] ?? 0) > 0)
                           .map((id) => {
-                            const meta = AVAILABLE_NUMBERS.find((n) => n.id === id);
+                            const meta = phoneNumbers.find((n) => n.id === id);
                             const pct = Math.round(((allocations[id] ?? 0) / totalAllocated) * 100);
-                            return `${meta?.label ?? id} ${pct}%`;
+                            return `${meta?.display_number ?? id} ${pct}%`;
                           })
                           .join(" · ")
-                      : "Sender-01 50% · Sender-02 30% · Sender-03 20%"}
+                      : "Números configurados automaticamente"}
                   </div>
                 </div>
                 <div>

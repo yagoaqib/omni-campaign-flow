@@ -16,7 +16,7 @@ import {
 import { useState } from "react";
 
 interface NumberValidationProps {
-  listId: string;
+  audienceId: string;
   totalContacts: number;
   onValidationComplete?: (results: ValidationResults) => void;
 }
@@ -73,7 +73,7 @@ const mockInvalidNumbers: InvalidNumber[] = [
   },
 ];
 
-export function NumberValidation({ listId, totalContacts, onValidationComplete }: NumberValidationProps) {
+export function NumberValidation({ audienceId, totalContacts, onValidationComplete }: NumberValidationProps) {
   const [isValidating, setIsValidating] = useState(false);
   const [validationResults, setValidationResults] = useState<ValidationResults | null>(null);
   const [selectedInvalids, setSelectedInvalids] = useState<string[]>([]);

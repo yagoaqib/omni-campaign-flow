@@ -12,7 +12,7 @@ import { useContacts } from "@/hooks/useContacts"
 
 const Contacts = () => {
   const [tags, setTags] = useState([]);
-  const { contactLists, totalStats, loading, createContactList } = useContacts();
+  const { contacts, contactLists, totalStats, loading, createContactList } = useContacts();
   const lists = contactLists.length > 0 ? contactLists : [
     {
       id: 1,
@@ -245,7 +245,8 @@ const Contacts = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <TagManager onTagsChange={setTags} />
           <ContactTagging 
-            tags={tags} 
+            tags={tags}
+            contacts={contacts}
             onContactUpdate={(contactId, newTags) => 
               console.log(`Contact ${contactId} updated with tags:`, newTags)
             } 
@@ -254,8 +255,8 @@ const Contacts = () => {
 
         {/* Number Validation Section */}
         <NumberValidation 
-          listId="list-1" 
-          totalContacts={39226}
+          audienceId="list-1" 
+          totalContacts={totalStats.total}
           onValidationComplete={(results) => console.log("Validation results:", results)}
         />
       </div>

@@ -50,63 +50,12 @@ interface Tag {
 
 interface ContactTaggingProps {
   tags: Tag[];
+  contacts: Contact[];
   onContactUpdate?: (contactId: string, newTags: string[]) => void;
 }
 
-const mockContacts: Contact[] = [
-  {
-    id: "1",
-    name: "João Silva",
-    phone: "+55 11 99999-0001",
-    email: "joao@email.com",
-    tags: ["lead", "engaged"],
-    lastContact: "2 min atrás",
-    hasWhatsapp: true,
-    source: "Website"
-  },
-  {
-    id: "2", 
-    name: "Maria Santos",
-    phone: "+55 21 88888-0002",
-    email: "maria@email.com",
-    tags: ["customer", "vip"],
-    lastContact: "15 min atrás",
-    hasWhatsapp: true,
-    source: "Instagram"
-  },
-  {
-    id: "3",
-    name: "Pedro Costa", 
-    phone: "+55 85 77777-0003",
-    email: "pedro@email.com",
-    tags: ["prospect", "cart_abandon"],
-    lastContact: "1 hora atrás",
-    hasWhatsapp: true,
-    source: "Google Ads"
-  },
-  {
-    id: "4",
-    name: "Ana Lima",
-    phone: "+55 11 66666-0004", 
-    email: "ana@email.com",
-    tags: ["inactive"],
-    lastContact: "30 dias atrás",
-    hasWhatsapp: false,
-    source: "Referência"
-  },
-  {
-    id: "5",
-    name: "Carlos Souza",
-    phone: "+55 21 55555-0005",
-    tags: ["black_friday", "engaged"],
-    lastContact: "5 min atrás",
-    hasWhatsapp: true,
-    source: "Email Marketing"
-  }
-];
-
-export function ContactTagging({ tags, onContactUpdate }: ContactTaggingProps) {
-  const [contacts, setContacts] = useState<Contact[]>(mockContacts);
+export function ContactTagging({ tags, contacts: initialContacts, onContactUpdate }: ContactTaggingProps) {
+  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTag, setSelectedTag] = useState<string>("all");
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);

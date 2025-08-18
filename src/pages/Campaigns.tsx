@@ -5,55 +5,43 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Play, Pause, Copy, BarChart3, Download } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useEffect } from "react"
-
+import { useCampaigns } from "@/hooks/useCampaigns"
+import { useToast } from "@/hooks/use-toast"
 
 const Campaigns = () => {
+  const { campaigns, loading, updateCampaignStatus } = useCampaigns()
+  
+  const pauseCampaign = (id: string) => updateCampaignStatus(id, "PAUSED")
+  const resumeCampaign = (id: string) => updateCampaignStatus(id, "RUNNING")
+  const { toast } = useToast()
+
   useEffect(() => { document.title = "Campanhas | Console" }, [])
-  const campaigns = [
-    {
-      id: 1,
-      name: "Black Friday 2024",
-      type: "Template",
-      provider: "Infobip",
-      status: "Running",
-      progress: 85,
-      sent: 8234,
-      delivered: 8104,
-      seen: 7456,
-      failed: 130
-    },
-    {
-      id: 2,
-      name: "Welcome Series",
-      type: "Sessão",
-      provider: "Gupshup", 
-      status: "Running",
-      progress: 92,
-      sent: 2847,
-      delivered: 2785,
-      seen: 2534,
-      failed: 62
-    },
-    {
-      id: 3,
-      name: "Cart Recovery",
-      type: "Template",
-      provider: "Infobip",
-      status: "Paused",
-      progress: 45,
-      sent: 1234,
-      delivered: 1198,
-      seen: 1089,
-      failed: 36
-    }
-  ]
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Running": return "bg-success-soft text-success"
-      case "Paused": return "bg-warning-soft text-warning"
-      case "Completed": return "bg-muted text-muted-foreground"
+      case "RUNNING": return "bg-success-soft text-success"
+      case "PAUSED": return "bg-warning-soft text-warning"
+      case "COMPLETED": return "bg-muted text-muted-foreground"
+      case "DRAFT": return "bg-secondary text-secondary-foreground"
       default: return "bg-muted text-muted-foreground"
+    }
+  }
+
+  const handlePauseResume = async (campaignId: string, currentStatus: string) => {
+    try {
+      if (currentStatus === "RUNNING") {
+        await pauseCampaign(campaignId)
+        toast({ title: "Campanha pausada", description: "A campanha foi pausada com sucesso." })
+      } else {
+        await resumeCampaign(campaignId)
+        toast({ title: "Campanha retomada", description: "A campanha foi retomada com sucesso." })
+      }
+    } catch (error) {
+      toast({ 
+        title: "Erro", 
+        description: "Falha ao alterar status da campanha.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -80,15 +68,34 @@ const Campaigns = () => {
 
         {/* Campaigns Grid */}
         <div className="grid gap-6">
-          {campaigns.map((campaign) => (
+          {loading ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Carregando campanhas...</p>
+              </CardContent>
+            </Card>
+          ) : campaigns.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground">Nenhuma campanha encontrada.</p>
+                <Link to="/campaigns/new">
+                  <Button className="mt-4">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Criar Primeira Campanha
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : (
+            campaigns.map((campaign) => (
             <Card key={campaign.id} className="overflow-hidden">
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <CardTitle className="text-xl">{campaign.name}</CardTitle>
-                      <Badge variant="outline">{campaign.type}</Badge>
-                      <Badge variant="secondary">{campaign.provider}</Badge>
+                      <Badge variant="outline">{campaign.desired_category}</Badge>
                     </div>
                     <Badge className={getStatusColor(campaign.status)}>
                       {campaign.status}
@@ -104,57 +111,56 @@ const Campaigns = () => {
                     <Button variant="ghost" size="icon">
                       <Download className="w-4 h-4" />
                     </Button>
-                    {campaign.status === "Running" ? (
-                      <Button variant="outline" size="sm" className="gap-1">
+                    {campaign.status === "RUNNING" ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-1"
+                        onClick={() => handlePauseResume(campaign.id, campaign.status)}
+                      >
                         <Pause className="w-3 h-3" />
                         Pausar
                       </Button>
-                    ) : (
-                      <Button size="sm" className="gap-1">
+                    ) : campaign.status === "PAUSED" ? (
+                      <Button 
+                        size="sm" 
+                        className="gap-1"
+                        onClick={() => handlePauseResume(campaign.id, campaign.status)}
+                      >
                         <Play className="w-3 h-3" />
                         Retomar
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Progress Bar */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progresso</span>
-                    <span>{campaign.progress}%</span>
+                {/* Campaign Info */}
+                <div className="space-y-4">
+                  <div className="text-sm text-muted-foreground">
+                    Criado em: {new Date(campaign.created_at).toLocaleDateString('pt-BR')}
+                    {campaign.deadline_at && (
+                      <span className="ml-4">
+                        Prazo: {new Date(campaign.deadline_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
                   </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all"
-                      style={{ width: `${campaign.progress}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Metrics */}
-                <div className="grid grid-cols-4 gap-4 pt-2">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{campaign.sent.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">Enviadas</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-success">{campaign.delivered.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">Entregues</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{campaign.seen.toLocaleString()}</div>
-                    <div className="text-sm text-muted-foreground">Lidas</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-destructive">{campaign.failed}</div>
-                    <div className="text-sm text-muted-foreground">Falhas</div>
-                  </div>
+                  
+                  {campaign.status === "DRAFT" && (
+                    <div className="text-center py-4">
+                      <p className="text-muted-foreground mb-4">
+                        Esta campanha ainda está em rascunho.
+                      </p>
+                      <Link to={`/campaigns/edit/${campaign.id}`}>
+                        <Button>Configurar Campanha</Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </AppLayout>
