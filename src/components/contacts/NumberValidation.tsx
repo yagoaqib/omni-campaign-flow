@@ -68,13 +68,14 @@ export function NumberValidation({ audienceId, totalContacts, onValidationComple
           reason,
           description,
           cost,
+          contact_id,
           contacts!inner(phone)
         `)
         .order('validated_at', { ascending: false });
 
       const invalidNumbers = (invalidResults || []).map(result => ({
         id: result.id,
-        phone: result.contacts.phone,
+        phone: (result.contacts as any)?.phone || 'N/A',
         reason: result.reason as InvalidNumber['reason'],
         description: result.description || 'Número inválido',
         cost: Number(result.cost)

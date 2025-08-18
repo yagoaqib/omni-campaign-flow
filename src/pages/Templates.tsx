@@ -180,7 +180,7 @@ const Templates = () => {
                 </CardContent>
               </Card>
             ) : (
-              <TemplateList templates={templates} onEdit={onEdit} onSync={onSync} />
+              <TemplateList templates={templates} onEdit={onEdit} onSync={onSync} loadTemplates={loadTemplates} />
             )}
           </TabsContent>
 
