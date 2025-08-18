@@ -11,6 +11,7 @@ import { Plus, Trash2, Upload } from "lucide-react"
 import TemplatePreview from "./TemplatePreview"
 import { TemplateButton, TemplateButtonType, TemplateHeaderType, TemplateMedia, TemplateModel } from "./types"
 import { useAvailableNumbers } from "@/hooks/useAvailableNumbers"
+import { useWorkspace } from "@/hooks/useWorkspace"
 
 function useFileAsDataUrl() {
   const [file, setFile] = React.useState<File | null>(null)
@@ -51,11 +52,14 @@ interface BuilderProps {
 
 export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
   const { numbers: AVAILABLE_NUMBERS } = useAvailableNumbers();
+  const { activeWorkspace } = useWorkspace();
+  
   const [name, setName] = React.useState(initial?.name ?? "")
   const [language, setLanguage] = React.useState(initial?.language ?? "pt_BR")
   const [category, setCategory] = React.useState<"MARKETING" | "TRANSACTIONAL" | "UTILITY">(
     initial?.category ?? "MARKETING"
   )
+  const [selectedWabaId, setSelectedWabaId] = React.useState<string>(initial?.assignedNumberId ?? "")
   const [headerType, setHeaderType] = React.useState<TemplateHeaderType>(initial?.headerType ?? "NONE")
   const [headerText, setHeaderText] = React.useState(initial?.headerText ?? "")
   const media = useFileAsDataUrl()
@@ -64,6 +68,17 @@ export default function TemplateBuilder({ onSave, initial }: BuilderProps) {
 const [buttons, setButtons] = React.useState<TemplateButton[]>(initial?.buttons ?? [])
 const [variableValues, setVariableValues] = React.useState<Record<string, string>>({})
 const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.assignedNumberId ?? "")
+
+  // Get unique WABAs from phone numbers
+  const wabaOptions = AVAILABLE_NUMBERS.reduce((acc, number) => {
+    if (!acc.find(w => w.id === number.id)) {
+      acc.push({
+        id: number.id,
+        label: number.displayNumber
+      });
+    }
+    return acc;
+  }, [] as { id: string; label: string }[]);
 
   const variableNumbers = React.useMemo(() => extractVariableNumbers(body), [body])
   const headerVariableNumbers = React.useMemo(
@@ -164,6 +179,52 @@ const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.
   }
 
   const onSubmit = () => {
+    if (!selectedWabaId) {
+      alert('Selecione um número/WABA para o template');
+      return;
+    }
+
+    // Build components schema for Meta API
+    const components: any[] = [];
+
+    // Add header component
+    if (headerType && headerType !== "NONE" && headerText) {
+      components.push({
+        type: 'HEADER',
+        format: headerType,
+        text: headerType === 'TEXT' ? headerText : undefined
+      });
+    }
+
+    // Add body component
+    if (body) {
+      components.push({
+        type: 'BODY',
+        text: body
+      });
+    }
+
+    // Add footer component
+    if (footer) {
+      components.push({
+        type: 'FOOTER',
+        text: footer
+      });
+    }
+
+    // Add buttons component
+    if (buttons.length > 0) {
+      components.push({
+        type: 'BUTTONS',
+        buttons: buttons.map(button => ({
+          type: button.type.toUpperCase(),
+          text: button.text,
+          url: button.url,
+          phone_number: button.phone
+        }))
+      });
+    }
+
     const now = new Date().toISOString()
     const headerMedia: TemplateMedia | undefined =
       headerType === "IMAGE" || headerType === "DOCUMENT" || headerType === "VIDEO"
@@ -185,7 +246,7 @@ const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.
       buttons,
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
-      wabaStatuses: initial?.wabaStatuses ?? [], // Preenchido automaticamente pela Meta API
+      wabaStatuses: initial?.wabaStatuses ?? [],
       examples: {
         bodyTextSets: bodyExampleSets,
         headerTextValues: headerType === "TEXT" && headerVariableNumbers.length ? headerExampleValues : undefined,
@@ -194,7 +255,7 @@ const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.
         body: bodyVarKeys,
         header: headerType === "TEXT" && headerVariableNumbers.length ? headerVarKeys : undefined,
       },
-      assignedNumberId: assignedNumberId || undefined,
+      assignedNumberId: selectedWabaId || undefined
     }
     onSave(model)
   }
@@ -242,15 +303,14 @@ const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.
 
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <Label>Número/WABA</Label>
-                <Select value={assignedNumberId} onValueChange={(v) => setAssignedNumberId(v)}>
+                <Label>Número/WABA *</Label>
+                <Select value={selectedWabaId} onValueChange={(v) => setSelectedWabaId(v)}>
                   <SelectTrigger className="z-50 bg-popover">
-                    <SelectValue placeholder="Selecione um número (opcional)" />
+                    <SelectValue placeholder="Selecione um número" />
                   </SelectTrigger>
                   <SelectContent className="z-50 bg-popover">
-                    <SelectItem value="">Sem vínculo</SelectItem>
-                    {AVAILABLE_NUMBERS.map((n) => (
-                      <SelectItem key={n.id} value={n.id}>{n.label}</SelectItem>
+                    {wabaOptions.map((waba) => (
+                      <SelectItem key={waba.id} value={waba.id}>{waba.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

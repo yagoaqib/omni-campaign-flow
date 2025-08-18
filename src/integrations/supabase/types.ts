@@ -165,6 +165,7 @@ export type Database = {
       campaigns: {
         Row: {
           audience_id: string | null
+          cascade_policy_id: string | null
           created_at: string | null
           deadline_at: string | null
           desired_category: string
@@ -175,6 +176,7 @@ export type Database = {
         }
         Insert: {
           audience_id?: string | null
+          cascade_policy_id?: string | null
           created_at?: string | null
           deadline_at?: string | null
           desired_category?: string
@@ -185,6 +187,7 @@ export type Database = {
         }
         Update: {
           audience_id?: string | null
+          cascade_policy_id?: string | null
           created_at?: string | null
           deadline_at?: string | null
           desired_category?: string
@@ -209,6 +212,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cascade_policies: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          desired_category: string
+          id: string
+          min_quality: string
+          number_quotas: Json
+          numbers_order: Json
+          per_number: Json
+          retry_backoff_sec: number
+          retry_max: number
+          rules: Json
+          template_stack_mkt: string | null
+          template_stack_util: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          desired_category?: string
+          id?: string
+          min_quality?: string
+          number_quotas?: Json
+          numbers_order?: Json
+          per_number?: Json
+          retry_backoff_sec?: number
+          retry_max?: number
+          rules?: Json
+          template_stack_mkt?: string | null
+          template_stack_util?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          desired_category?: string
+          id?: string
+          min_quality?: string
+          number_quotas?: Json
+          numbers_order?: Json
+          per_number?: Json
+          retry_backoff_sec?: number
+          retry_max?: number
+          rules?: Json
+          template_stack_mkt?: string | null
+          template_stack_util?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
       }
       contact_list_assignments: {
         Row: {
@@ -532,6 +589,36 @@ export type Database = {
         }
         Relationships: []
       }
+      number_validation_results: {
+        Row: {
+          contact_id: string
+          cost: number | null
+          created_at: string
+          description: string | null
+          id: string
+          reason: string
+          validated_at: string
+        }
+        Insert: {
+          contact_id: string
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason: string
+          validated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason?: string
+          validated_at?: string
+        }
+        Relationships: []
+      }
       phone_numbers: {
         Row: {
           created_at: string | null
@@ -644,6 +731,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      template_statuses: {
+        Row: {
+          created_at: string
+          id: string
+          phone_number_ref: string
+          review_reason: string | null
+          status: string
+          synced_at: string | null
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phone_number_ref: string
+          review_reason?: string | null
+          status?: string
+          synced_at?: string | null
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone_number_ref?: string
+          review_reason?: string | null
+          status?: string
+          synced_at?: string | null
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       templates: {
         Row: {

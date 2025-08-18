@@ -14,6 +14,8 @@ import {
   Download
 } from "lucide-react";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface NumberValidationProps {
   audienceId: string;
@@ -22,12 +24,13 @@ interface NumberValidationProps {
 }
 
 interface ValidationResults {
-  valid: number;
-  invalid: InvalidNumber[];
+  validNumbers: number;
+  invalidNumbers: number;
   totalSavings: number;
 }
 
 interface InvalidNumber {
+  id: string;
   phone: string;
   name?: string;
   reason: "invalid_format" | "landline" | "no_whatsapp" | "blocked" | "duplicate";
@@ -35,90 +38,104 @@ interface InvalidNumber {
   cost: number;
 }
 
-const mockInvalidNumbers: InvalidNumber[] = [
-  {
-    phone: "+55 11 3333-3333",
-    name: "João Silva",
-    reason: "landline",
-    description: "Número fixo - não tem WhatsApp",
-    cost: 0.08
-  },
-  {
-    phone: "+55 21 9999-999",
-    name: "Maria Santos", 
-    reason: "invalid_format",
-    description: "Formato inválido - dígitos insuficientes",
-    cost: 0.08
-  },
-  {
-    phone: "+55 85 77777-7777",
-    name: "Pedro Costa",
-    reason: "no_whatsapp",
-    description: "Número válido mas sem WhatsApp",
-    cost: 0.08
-  },
-  {
-    phone: "+55 11 99999-9999",
-    name: "Ana Lima",
-    reason: "duplicate",
-    description: "Número duplicado na lista",
-    cost: 0.08
-  },
-  {
-    phone: "+55 21 88888-8888",
-    name: "Carlos Souza",
-    reason: "blocked",
-    description: "Número bloqueado (opt-out)",
-    cost: 0.08
-  },
-];
+// Remove mock data - will be populated from API
 
 export function NumberValidation({ audienceId, totalContacts, onValidationComplete }: NumberValidationProps) {
   const [isValidating, setIsValidating] = useState(false);
   const [validationResults, setValidationResults] = useState<ValidationResults | null>(null);
   const [selectedInvalids, setSelectedInvalids] = useState<string[]>([]);
+  const [mockInvalidNumbers, setMockInvalidNumbers] = useState<InvalidNumber[]>([]);
 
   const startValidation = async () => {
     setIsValidating(true);
     
-    // Simular validação
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    const results: ValidationResults = {
-      valid: totalContacts - mockInvalidNumbers.length,
-      invalid: mockInvalidNumbers,
-      totalSavings: mockInvalidNumbers.reduce((sum, num) => sum + num.cost, 0)
-    };
-    
-    setValidationResults(results);
-    setSelectedInvalids(mockInvalidNumbers.map(n => n.phone));
-    setIsValidating(false);
-    onValidationComplete?.(results);
+    try {
+      const response = await supabase.functions.invoke('validate-numbers', {
+        body: { audienceId }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const { validCount, invalidCount, totalCost } = response.data;
+      
+      // Get detailed invalid results
+      const { data: invalidResults } = await supabase
+        .from('number_validation_results')
+        .select(`
+          id,
+          reason,
+          description,
+          cost,
+          contacts!inner(phone)
+        `)
+        .order('validated_at', { ascending: false });
+
+      const invalidNumbers = (invalidResults || []).map(result => ({
+        id: result.id,
+        phone: result.contacts.phone,
+        reason: result.reason as InvalidNumber['reason'],
+        description: result.description || 'Número inválido',
+        cost: Number(result.cost)
+      }));
+
+      setValidationResults({
+        validNumbers: validCount,
+        invalidNumbers: invalidCount,
+        totalSavings: totalCost
+      });
+
+      setMockInvalidNumbers(invalidNumbers);
+      setSelectedInvalids(invalidNumbers.map(n => n.phone));
+      
+      onValidationComplete?.({
+        validNumbers: validCount,
+        invalidNumbers: invalidCount,
+        totalSavings: totalCost
+      });
+      
+    } catch (error) {
+      console.error('Validation error:', error);
+      toast.error("Erro na validação: " + (error as Error).message);
+    } finally {
+      setIsValidating(false);
+    }
   };
 
-  const removeSelectedInvalids = () => {
-    if (!validationResults) return;
+  const removeSelectedInvalids = async () => {
+    if (!validationResults || selectedInvalids.length === 0) return;
     
-    const remaining = validationResults.invalid.filter(n => !selectedInvalids.includes(n.phone));
-    const removedSavings = validationResults.invalid
-      .filter(n => selectedInvalids.includes(n.phone))
-      .reduce((sum, n) => sum + n.cost, 0);
-    
-    setValidationResults({
-      ...validationResults,
-      invalid: remaining,
-      totalSavings: removedSavings
-    });
-    setSelectedInvalids([]);
+    try {
+      // Remove selected invalid numbers from database
+      await supabase
+        .from('number_validation_results')
+        .delete()
+        .in('id', mockInvalidNumbers.filter(n => selectedInvalids.includes(n.phone)).map(n => n.id));
+
+      const remaining = mockInvalidNumbers.filter(n => !selectedInvalids.includes(n.phone));
+      const removedCount = selectedInvalids.length;
+      
+      setMockInvalidNumbers(remaining);
+      setValidationResults({
+        ...validationResults,
+        invalidNumbers: remaining.length,
+        totalSavings: remaining.reduce((sum, n) => sum + n.cost, 0)
+      });
+      setSelectedInvalids([]);
+      
+      toast.success(`${removedCount} números irregulares removidos`);
+    } catch (error) {
+      console.error('Error removing invalid numbers:', error);
+      toast.error("Erro ao remover números irregulares");
+    }
   };
 
   const toggleSelectAll = () => {
-    if (!validationResults) return;
-    
-    if (selectedInvalids.length === validationResults.invalid.length) {
+    if (selectedInvalids.length === mockInvalidNumbers.length) {
       setSelectedInvalids([]);
     } else {
-      setSelectedInvalids(validationResults.invalid.map(n => n.phone));
+      setSelectedInvalids(mockInvalidNumbers.map(n => n.phone));
     }
   };
 
@@ -193,10 +210,10 @@ export function NumberValidation({ audienceId, totalContacts, onValidationComple
           <div className="space-y-6">
             {/* Resumo da Validação */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-success/50 bg-success/5">
+                <Card className="border-success/50 bg-success/5">
                 <CardContent className="p-4 text-center">
                   <CheckCircle className="w-8 h-8 text-success mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-success">{validationResults.valid.toLocaleString()}</div>
+                  <div className="text-2xl font-bold text-success">{validationResults.validNumbers.toLocaleString()}</div>
                   <div className="text-sm text-muted-foreground">Números Válidos</div>
                 </CardContent>
               </Card>
@@ -204,7 +221,7 @@ export function NumberValidation({ audienceId, totalContacts, onValidationComple
               <Card className="border-warning/50 bg-warning/5">
                 <CardContent className="p-4 text-center">
                   <AlertTriangle className="w-8 h-8 text-warning mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-warning">{validationResults.invalid.length}</div>
+                  <div className="text-2xl font-bold text-warning">{mockInvalidNumbers.length}</div>
                   <div className="text-sm text-muted-foreground">Números Irregulares</div>
                 </CardContent>
               </Card>
@@ -219,7 +236,7 @@ export function NumberValidation({ audienceId, totalContacts, onValidationComple
             </div>
 
             {/* Lista de Números Irregulares */}
-            {validationResults.invalid.length > 0 && (
+            {mockInvalidNumbers.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium">Números Irregulares Encontrados</h4>
@@ -231,7 +248,7 @@ export function NumberValidation({ audienceId, totalContacts, onValidationComple
                       className="gap-1"
                     >
                       <Checkbox 
-                        checked={selectedInvalids.length === validationResults.invalid.length}
+                        checked={selectedInvalids.length === mockInvalidNumbers.length}
                         className="w-3 h-3"
                       />
                       Selecionar Todos
@@ -250,7 +267,7 @@ export function NumberValidation({ audienceId, totalContacts, onValidationComple
                 </div>
 
                 <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {validationResults.invalid.map((invalid) => (
+                  {mockInvalidNumbers.map((invalid) => (
                     <div 
                       key={invalid.phone} 
                       className={`flex items-center gap-3 p-3 rounded-lg border ${getReasonColor(invalid.reason)}`}
@@ -294,7 +311,7 @@ export function NumberValidation({ audienceId, totalContacts, onValidationComple
                 {selectedInvalids.length > 0 && (
                   <span>
                     {selectedInvalids.length} números selecionados • 
-                    Economia: R$ {validationResults.invalid
+                    Economia: R$ {mockInvalidNumbers
                       .filter(n => selectedInvalids.includes(n.phone))
                       .reduce((sum, n) => sum + n.cost, 0)
                       .toFixed(2)}

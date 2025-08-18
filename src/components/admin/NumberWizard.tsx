@@ -265,46 +265,56 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
     }
   };
 
-  const resendWebhook = async () => {
-    if (provider !== "meta") {
-      toast({ title: "Webhook", description: "Verificação disponível apenas para Meta Cloud", variant: "destructive" });
+  const [savedPhoneNumber, setSavedPhoneNumber] = React.useState<any>(null);
+  const [webhookValidating, setWebhookValidating] = React.useState(false);
+
+  const validateWebhook = async () => {
+    if (!savedPhoneNumber) {
+      toast({ title: "Erro", description: "Salve o número primeiro", variant: "destructive" });
       return;
     }
 
+    setWebhookValidating(true);
+    
     try {
-      setWebhookOk(null);
-      
-      // Usar a função edge para verificar o webhook real
-      const { data, error } = await supabase.functions.invoke('webhook-verify', {
-        body: {
-          webhookUrl: 'https://your-webhook-url.com/webhook', // TODO: usar URL real do projeto
-          verifyToken: 'your-verify-token' // TODO: usar token real
+      const response = await supabase.functions.invoke('validate-webhook', {
+        body: { 
+          phoneNumberId: savedPhoneNumber.id,
+          workspaceId: activeWorkspace.id
         }
       });
 
-      if (error) throw error;
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
 
-      if (data.success) {
-        setWebhookOk(true);
+      const { webhookConfigured, canReceiveMessages, message, instructions } = response.data;
+      
+      setWebhookOk(webhookConfigured);
+      
+      if (webhookConfigured) {
         toast({ 
           title: "Webhook verificado", 
-          description: data.message || "Webhook verificado com sucesso"
+          description: message
         });
       } else {
-        setWebhookOk(false);
         toast({ 
           title: "Falha na verificação", 
-          description: data.error || "Webhook não pôde ser verificado",
+          description: message,
           variant: "destructive"
         });
       }
+      
     } catch (error) {
-      setWebhookOk(false);
+      console.error('Webhook validation error:', error);
       toast({ 
         title: "Erro na verificação", 
         description: error instanceof Error ? error.message : "Falha ao verificar webhook",
         variant: "destructive" 
       });
+      setWebhookOk(false);
+    } finally {
+      setWebhookValidating(false);
     }
   };
 
@@ -331,6 +341,7 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
       };
 
       const savedNumber = await savePhoneNumber(phoneNumberData);
+      setSavedPhoneNumber(savedNumber);
       
       if (savedNumber) {
         // Criar objeto compatível com ExtendedNumber para o callback
@@ -588,7 +599,7 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
                 <p className="font-medium">Webhooks</p>
                 <p className="text-sm mt-1">{webhookOk === null ? "⚠️ Pendente" : webhookOk ? "✅ Verificado" : "⚠️ Pendente"}</p>
                 <div className="mt-2 flex gap-2">
-                  <Button size="sm" variant="secondary" onClick={resendWebhook}>Reenviar verificação</Button>
+                  <Button size="sm" variant="secondary" onClick={validateWebhook}>Verificar webhook</Button>
                 </div>
               </div>
               <div className="p-3 rounded-md border">

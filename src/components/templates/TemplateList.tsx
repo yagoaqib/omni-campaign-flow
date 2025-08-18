@@ -6,11 +6,14 @@ import { Eye, RefreshCw, Edit3 } from "lucide-react"
 import { TemplateModel } from "./types"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAvailableNumbers } from "@/hooks/useAvailableNumbers"
+import { supabase } from "@/integrations/supabase/client"
+import { toast } from "sonner"
 
 interface Props {
   templates: TemplateModel[]
   onEdit: (tpl: TemplateModel) => void
   onSync: (tpl: TemplateModel) => void
+  loadTemplates: () => Promise<void>
 }
 
 function getStatusTag(t: TemplateModel) {
@@ -21,14 +24,60 @@ function getStatusTag(t: TemplateModel) {
   return <Badge variant="outline">Rascunho</Badge>
 }
 
-export default function TemplateList({ templates, onEdit, onSync }: Props) {
+export default function TemplateList({ templates, onEdit, onSync, loadTemplates }: Props) {
   const { numbers: phoneNumbers, loading } = useAvailableNumbers()
   const [filterId, setFilterId] = React.useState<string>("all")
+  const [loadingStatus, setLoadingStatus] = React.useState<string | null>(null)
+  
   const getNumberLabel = (id?: string) => phoneNumbers.find((n) => n.id === id)?.label ?? "—"
   const list = React.useMemo(
     () => templates.filter((t) => (filterId === "all" ? true : t.assignedNumberId === filterId)),
     [templates, filterId]
   )
+
+  const updateStatuses = async (templateId: string) => {
+    setLoadingStatus(templateId);
+    
+    try {
+      const template = templates.find(t => t.id === templateId);
+      if (!template) return;
+
+      // Get phone numbers for this template
+      const { data: phoneNumbers } = await supabase
+        .from('phone_numbers')
+        .select('id, display_number');
+
+      if (!phoneNumbers || phoneNumbers.length === 0) {
+        toast.error("Nenhum número encontrado para sincronização");
+        return;
+      }
+
+      // Sync for each phone number
+      for (const phoneNumber of phoneNumbers) {
+        const response = await supabase.functions.invoke('sync-template-statuses', {
+          body: { 
+            phoneNumberId: phoneNumber.id,
+            workspaceId: 'default' // TODO: get from context
+          }
+        });
+
+        if (response.error) {
+          console.error('Sync error for phone:', phoneNumber.display_number, response.error);
+        }
+      }
+
+      // Reload templates to show updated statuses
+      await loadTemplates();
+      
+      toast.success("Templates sincronizados com sucesso");
+      
+    } catch (error) {
+      console.error('Error syncing templates:', error);
+      toast.error("Erro ao sincronizar templates");
+    } finally {
+      setLoadingStatus(null);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -63,7 +112,15 @@ export default function TemplateList({ templates, onEdit, onSync }: Props) {
                 </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="icon" onClick={() => onEdit(t)} title="Editar"><Edit3 className="w-4 h-4"/></Button>
-                  <Button variant="ghost" size="icon" onClick={() => onSync(t)} title="Sincronizar"><RefreshCw className="w-4 h-4"/></Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => updateStatuses(t.id)} 
+                    disabled={loadingStatus === t.id}
+                    title="Sincronizar"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingStatus === t.id ? 'animate-spin' : ''}`}/>
+                  </Button>
                 </div>
               </div>
             </CardHeader>
