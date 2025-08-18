@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -476,26 +476,35 @@ export type Database = {
       }
       wabas: {
         Row: {
+          access_token: string | null
+          app_secret: string | null
           created_at: string | null
           id: string
           meta_business_id: string
           name: string | null
+          verify_token: string | null
           waba_id: string
           workspace_id: string
         }
         Insert: {
+          access_token?: string | null
+          app_secret?: string | null
           created_at?: string | null
           id?: string
           meta_business_id: string
           name?: string | null
+          verify_token?: string | null
           waba_id: string
           workspace_id: string
         }
         Update: {
+          access_token?: string | null
+          app_secret?: string | null
           created_at?: string | null
           id?: string
           meta_business_id?: string
           name?: string | null
+          verify_token?: string | null
           waba_id?: string
           workspace_id?: string
         }
@@ -571,7 +580,7 @@ export type Database = {
     }
     Functions: {
       has_workspace_role: {
-        Args: { _workspace_id: string; _roles: string[] }
+        Args: { _roles: string[]; _workspace_id: string }
         Returns: boolean
       }
       is_member: {

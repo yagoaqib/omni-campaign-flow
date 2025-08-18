@@ -12,9 +12,11 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Link } from "react-router-dom"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useWorkspace } from "@/hooks/useWorkspace"
 
-const workspaces = [
+// Fallback for demo/mock data
+const mockWorkspaces = [
   { id: "1", name: "Cliente A", status: "online" },
   { id: "2", name: "Cliente B", status: "online" },
   { id: "3", name: "Cliente C", status: "offline" },
@@ -27,6 +29,16 @@ const alerts = [
 ]
 
 export function TopBar() {
+  const { activeWorkspace, workspaces, loadWorkspaces, switchWorkspace } = useWorkspace();
+  
+  useEffect(() => {
+    loadWorkspaces();
+  }, [loadWorkspaces]);
+
+  // Use real workspaces or fallback to mock data
+  const displayWorkspaces = workspaces.length > 0 ? workspaces : mockWorkspaces;
+  const currentWorkspace = activeWorkspace || { name: "Cliente A", id: "1" };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center px-6 gap-4">
@@ -38,20 +50,28 @@ export function TopBar() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="h-9 px-3 gap-2">
               <div className="w-2 h-2 bg-success rounded-full"></div>
-              <span className="font-medium">Cliente A</span>
+              <span className="font-medium">{currentWorkspace.name}</span>
               <ChevronDown className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
             <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {workspaces.map((workspace) => (
-              <DropdownMenuItem key={workspace.id} className="flex items-center gap-2">
+            {displayWorkspaces.map((workspace) => (
+              <DropdownMenuItem 
+                key={workspace.id} 
+                className="flex items-center gap-2"
+                onClick={() => {
+                  if (workspaces.length > 0) {
+                    switchWorkspace(workspace);
+                  }
+                }}
+              >
                 <div className={`w-2 h-2 rounded-full ${
-                  workspace.status === 'online' ? 'bg-success' : 'bg-muted-foreground'
+                  (workspace as any).status === 'offline' ? 'bg-muted-foreground' : 'bg-success'
                 }`}></div>
                 <span>{workspace.name}</span>
-                {workspace.name === "Cliente A" && (
+                {workspace.id === currentWorkspace.id && (
                   <Badge variant="secondary" className="ml-auto text-xs">Atual</Badge>
                 )}
               </DropdownMenuItem>

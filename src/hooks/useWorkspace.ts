@@ -1,0 +1,121 @@
+import { useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+
+type Workspace = Database["public"]["Tables"]["workspaces"]["Row"];
+type WABA = Database["public"]["Tables"]["wabas"]["Row"];
+
+export function useWorkspace() {
+  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [wabas, setWabas] = useState<WABA[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadWorkspaces = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("workspaces")
+        .select("*")
+        .order("name");
+
+      if (error) throw error;
+      setWorkspaces(data || []);
+      if (!activeWorkspace && data?.length) {
+        const firstWorkspace = data[0];
+        setActiveWorkspace(firstWorkspace);
+        await loadWabas(firstWorkspace.id);
+      }
+    } catch (error) {
+      console.error("Failed to load workspaces:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeWorkspace]);
+
+  const loadWabas = useCallback(async (workspaceId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("wabas")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("name");
+
+      if (error) throw error;
+      setWabas(data || []);
+    } catch (error) {
+      console.error("Failed to load WABAs:", error);
+    }
+  }, []);
+
+  const switchWorkspace = useCallback(async (workspace: Workspace) => {
+    setActiveWorkspace(workspace);
+    await loadWabas(workspace.id);
+  }, [loadWabas]);
+
+  const updateWaba = useCallback(async (waba: WABA) => {
+    try {
+      const { error } = await supabase
+        .from("wabas")
+        .update({
+          verify_token: waba.verify_token,
+          app_secret: waba.app_secret,
+          access_token: waba.access_token,
+          name: waba.name,
+          meta_business_id: waba.meta_business_id,
+          waba_id: waba.waba_id,
+        })
+        .eq("id", waba.id);
+
+      if (error) throw error;
+      
+      // Reload WABAs for current workspace
+      if (activeWorkspace) {
+        await loadWabas(activeWorkspace.id);
+      }
+      return true;
+    } catch (error) {
+      console.error("Failed to update WABA:", error);
+      return false;
+    }
+  }, [activeWorkspace, loadWabas]);
+
+  const createWaba = useCallback(async (wabaData: Partial<WABA>) => {
+    if (!activeWorkspace) return false;
+
+    try {
+      const { error } = await supabase
+        .from("wabas")
+        .insert({
+          workspace_id: activeWorkspace.id,
+          name: wabaData.name || "",
+          meta_business_id: wabaData.meta_business_id || "",
+          waba_id: wabaData.waba_id || "",
+          verify_token: wabaData.verify_token,
+          app_secret: wabaData.app_secret,
+          access_token: wabaData.access_token,
+        });
+
+      if (error) throw error;
+      
+      // Reload WABAs for current workspace
+      await loadWabas(activeWorkspace.id);
+      return true;
+    } catch (error) {
+      console.error("Failed to create WABA:", error);
+      return false;
+    }
+  }, [activeWorkspace, loadWabas]);
+
+  return {
+    activeWorkspace,
+    workspaces,
+    wabas,
+    loading,
+    loadWorkspaces,
+    loadWabas,
+    switchWorkspace,
+    updateWaba,
+    createWaba,
+  };
+}

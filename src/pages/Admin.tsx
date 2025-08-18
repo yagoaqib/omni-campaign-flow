@@ -1,17 +1,26 @@
 import { AppLayout } from "@/components/layout/AppLayout"
-import NumbersIntegration from "@/components/admin/NumbersIntegration"
+import ClientCredentialsForm from "@/components/admin/ClientCredentialsForm"
+import { useWorkspace } from "@/hooks/useWorkspace"
 
 const Admin = () => {
+  const { activeWorkspace, wabas, loadWabas, updateWaba, createWaba } = useWorkspace();
+
+  // WABAs are automatically loaded when workspace changes in the hook
+
   return (
     <AppLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Administração</h1>
-          <p className="text-muted-foreground">Configurações de provedores e integrações</p>
+          <p className="text-muted-foreground">Configurações de credenciais Meta WhatsApp Cloud</p>
         </div>
         <section>
-          {/* Integrações > Números */}
-          <NumbersIntegration />
+          <ClientCredentialsForm 
+            workspaceName={activeWorkspace?.name || "Cliente"}
+            wabas={wabas}
+            onUpdateWaba={updateWaba}
+            onCreateWaba={createWaba}
+          />
         </section>
       </div>
     </AppLayout>
