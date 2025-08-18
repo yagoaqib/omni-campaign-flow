@@ -27,7 +27,7 @@ export default function ClientCredentialsForm({
   const { toast } = useToast();
   const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
   const [editingWaba, setEditingWaba] = useState<WABA | null>(null);
-  const [newWaba, setNewWaba] = useState<Partial<WABA>>({
+  const [newWaba, setNewWaba] = useState<Partial<WABA> & { app_id?: string }>({
     name: "",
     meta_business_id: "",
     waba_id: "",
@@ -224,8 +224,8 @@ export default function ClientCredentialsForm({
                   <Label htmlFor={`${waba.id}-app-id`}>App ID</Label>
                   <Input
                     id={`${waba.id}-app-id`}
-                    value={editingWaba.app_id || ""}
-                    onChange={(e) => setEditingWaba({ ...editingWaba, app_id: e.target.value })}
+                    value={(editingWaba as any).app_id || ""}
+                    onChange={(e) => setEditingWaba({ ...editingWaba, app_id: e.target.value } as any)}
                     placeholder="1234567890123456"
                   />
                 </div>

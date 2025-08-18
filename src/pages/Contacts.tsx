@@ -131,7 +131,7 @@ const Contacts = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {lists.map((list) => (
+              {contactLists.map((list) => (
                 <div key={list.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
