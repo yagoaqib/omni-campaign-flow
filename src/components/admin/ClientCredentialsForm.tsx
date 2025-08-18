@@ -31,6 +31,7 @@ export default function ClientCredentialsForm({
     name: "",
     meta_business_id: "",
     waba_id: "",
+    app_id: "",
     verify_token: "",
     app_secret: "",
     access_token: "",
@@ -85,6 +86,7 @@ export default function ClientCredentialsForm({
         name: "",
         meta_business_id: "",
         waba_id: "",
+        app_id: "",
         verify_token: "",
         app_secret: "",
         access_token: "",
@@ -218,6 +220,15 @@ export default function ClientCredentialsForm({
                     placeholder="1234567890123456"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`${waba.id}-app-id`}>App ID</Label>
+                  <Input
+                    id={`${waba.id}-app-id`}
+                    value={editingWaba.app_id || ""}
+                    onChange={(e) => setEditingWaba({ ...editingWaba, app_id: e.target.value })}
+                    placeholder="1234567890123456"
+                  />
+                </div>
                 {renderTokenField(
                   waba.id,
                   "verify_token",
@@ -312,15 +323,24 @@ export default function ClientCredentialsForm({
                   placeholder="1234567890123456"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-business-id">Meta Business ID</Label>
-                <Input
-                  id="new-business-id"
-                  value={newWaba.meta_business_id || ""}
-                  onChange={(e) => setNewWaba({ ...newWaba, meta_business_id: e.target.value })}
-                  placeholder="1234567890123456"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-business-id">Meta Business ID</Label>
+                  <Input
+                    id="new-business-id"
+                    value={newWaba.meta_business_id || ""}
+                    onChange={(e) => setNewWaba({ ...newWaba, meta_business_id: e.target.value })}
+                    placeholder="1234567890123456"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-app-id">App ID</Label>
+                  <Input
+                    id="new-app-id"
+                    value={newWaba.app_id || ""}
+                    onChange={(e) => setNewWaba({ ...newWaba, app_id: e.target.value })}
+                    placeholder="1234567890123456"
+                  />
+                </div>
               {renderTokenField(
                 "new",
                 "verify_token",

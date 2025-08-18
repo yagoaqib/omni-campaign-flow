@@ -13,40 +13,6 @@ import { useContacts } from "@/hooks/useContacts"
 const Contacts = () => {
   const [tags, setTags] = useState([]);
   const { contacts, contactLists, totalStats, loading, createContactList } = useContacts();
-  const lists = contactLists.length > 0 ? contactLists : [
-    {
-      id: 1,
-      name: "Clientes Premium",
-      contacts: 2847,
-      lastUpdated: "2 horas atrás",
-      tags: ["premium", "vip"],
-      status: "active"
-    },
-    {
-      id: 2,
-      name: "Newsletter Subscribers", 
-      contacts: 18234,
-      lastUpdated: "1 dia atrás",
-      tags: ["newsletter", "marketing"],
-      status: "active"
-    },
-    {
-      id: 3,
-      name: "Cart Abandoners",
-      contacts: 5689,
-      lastUpdated: "3 horas atrás", 
-      tags: ["ecommerce", "abandoned"],
-      status: "active"
-    },
-    {
-      id: 4,
-      name: "Black Friday 2023",
-      contacts: 12456,
-      lastUpdated: "30 dias atrás",
-      tags: ["campaign", "archived"],
-      status: "archived"
-    }
-  ]
 
   const recentContacts = [
     {
