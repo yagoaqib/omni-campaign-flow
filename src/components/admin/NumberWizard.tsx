@@ -8,10 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { usePhoneNumbers } from "@/hooks/usePhoneNumbers";
 import type { ExtendedNumber } from "./NumbersIntegration";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HelpCircle } from "lucide-react";
+import { createMetaApi } from "@/services/metaApi";
+import { createInfobipApi } from "@/services/infobipApi";
+import { createGupshupApi } from "@/services/gupshupApi";
 
 // Tipos auxiliares
 type Provider = "meta" | "infobip" | "gupshup";
@@ -27,6 +32,8 @@ const POOLS = ["Pool Marketing BR", "Pool Transacional BR", "Pool Global LATAM"]
 
 export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps) {
   const { toast } = useToast();
+  const { activeWorkspace, wabas } = useWorkspace();
+  const { savePhoneNumber } = usePhoneNumbers();
 
   const HelpHint = ({ text }: { text: string }) => (
     <Tooltip>
@@ -49,13 +56,13 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
   const [canFallback, setCanFallback] = React.useState<boolean>(true);
 
   // Passo 2 — específicos
+  const [selectedWaba, setSelectedWaba] = React.useState<string>("");
   const [meta, setMeta] = React.useState({
     waba_id: "",
     phone_number_id: "",
     access_token: "",
     graph_version: "v19.0",
     app_id: "",
-    webhook_verify_token: "",
   });
   const [infobip, setInfobip] = React.useState({
     base_url: "",
@@ -89,7 +96,7 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
     setTps(10);
     setPools([]);
     setCanFallback(true);
-    setMeta({ waba_id: "", phone_number_id: "", access_token: "", graph_version: "v19.0", app_id: "", webhook_verify_token: "" });
+    setMeta({ waba_id: "", phone_number_id: "", access_token: "", graph_version: "v19.0", app_id: "" });
     setInfobip({ base_url: "", api_key: "", from: "", dlr_secret: "", inbound_secret: "" });
     setGupshup({ api_key: "", app: "", source: "", callback_secret: "", environment: "live" });
     setConnOk(null); setConnMsg(""); setWebhookOk(null); setTplSyncOk(null);
@@ -107,28 +114,154 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
 
   const testConnection = async () => {
     setConnMsg("Testando...");
-    await new Promise((r) => setTimeout(r, 800));
-    // regra simples de validação local
-    let ok = false;
-    if (provider === "meta") ok = !!(meta.waba_id.match(/^\d{12,16}$/) && meta.phone_number_id && meta.access_token);
-    if (provider === "infobip") ok = /^https:\/\/.*\.api\.infobip\.com$/i.test(infobip.base_url) && infobip.api_key.length >= 32 && /\d{10,15}/.test(infobip.from);
-    if (provider === "gupshup") ok = !!(gupshup.api_key && gupshup.app && /\d{10,15}/.test(gupshup.source));
-    setConnOk(ok);
-    setConnMsg(ok ? "Conexão validada (200 OK simulado)." : "Falha de conexão: verifique os campos.");
+    setConnOk(null);
+    
+    try {
+      let result = { success: false, message: "" };
+      
+      if (provider === "meta") {
+        const selectedWabaData = wabas.find(w => w.id === selectedWaba);
+        if (!selectedWabaData) {
+          throw new Error("WABA não selecionada");
+        }
+        
+        const api = createMetaApi({
+          access_token: selectedWabaData.access_token || "",
+          waba_id: selectedWabaData.waba_id,
+          phone_number_id: meta.phone_number_id,
+          graph_version: meta.graph_version
+        });
+        
+        const validation = await api.validateConnection();
+        result = { success: validation.success, message: validation.error || "Conexão validada com sucesso" };
+      } else if (provider === "infobip") {
+        const api = createInfobipApi({
+          base_url: infobip.base_url,
+          api_key: infobip.api_key,
+          from: infobip.from
+        });
+        
+        const validation = await api.validateConnection();
+        result = { success: validation.success, message: validation.error || "Conexão validada com sucesso" };
+      } else if (provider === "gupshup") {
+        const api = createGupshupApi({
+          api_key: gupshup.api_key,
+          app: gupshup.app,
+          source: gupshup.source,
+          environment: gupshup.environment
+        });
+        
+        const validation = await api.validateConnection();
+        result = { success: validation.success, message: validation.error || "Conexão validada com sucesso" };
+      }
+      
+      setConnOk(result.success);
+      setConnMsg(result.message);
+    } catch (error) {
+      setConnOk(false);
+      setConnMsg(error instanceof Error ? error.message : "Erro na validação");
+    }
   };
 
   const checkQualityTier = async () => {
-    await new Promise((r) => setTimeout(r, 500));
-    setQuality("HIGH");
-    setTier("10k");
-    toast({ title: "Qualidade/Tier", description: "HIGH · Tier 10k (simulado)" });
+    if (provider !== "meta" || !selectedWaba) {
+      toast({ title: "Erro", description: "Função disponível apenas para Meta Cloud", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      const selectedWabaData = wabas.find(w => w.id === selectedWaba);
+      if (!selectedWabaData) return;
+      
+      const api = createMetaApi({
+        access_token: selectedWabaData.access_token || "",
+        waba_id: selectedWabaData.waba_id,
+        phone_number_id: meta.phone_number_id,
+        graph_version: meta.graph_version
+      });
+      
+      const result = await api.checkQualityTier();
+      if (result.success && result.data) {
+        setQuality(result.data.quality_rating as any);
+        setTier(result.data.messaging_limit_tier);
+        toast({ 
+          title: "Qualidade/Tier obtida", 
+          description: `${result.data.quality_rating} · Tier ${result.data.messaging_limit_tier}` 
+        });
+      } else {
+        toast({ title: "Erro", description: result.error, variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Erro", description: "Falha ao obter qualidade/tier", variant: "destructive" });
+    }
   };
 
   const syncTemplates = async () => {
-    await new Promise((r) => setTimeout(r, 900));
-    setTplStats({ approved: 23, pending: 2, rejected: 1 });
-    setTplSyncOk(true);
-    toast({ title: "Templates sincronizados", description: "Catálogo atualizado (simulado)." });
+    try {
+      let result = { success: false, templates: [], stats: { approved: 0, pending: 0, rejected: 0 } };
+      
+      if (provider === "meta") {
+        const selectedWabaData = wabas.find(w => w.id === selectedWaba);
+        if (!selectedWabaData) {
+          throw new Error("WABA não selecionada");
+        }
+        
+        const api = createMetaApi({
+          access_token: selectedWabaData.access_token || "",
+          waba_id: selectedWabaData.waba_id,
+          phone_number_id: meta.phone_number_id,
+          graph_version: meta.graph_version
+        });
+        
+        const syncResult = await api.syncTemplates();
+        if (syncResult.success && syncResult.data) {
+          result = { success: true, templates: syncResult.data.templates, stats: syncResult.data.stats };
+        } else {
+          throw new Error(syncResult.error || "Falha na sincronização");
+        }
+      } else if (provider === "infobip") {
+        const api = createInfobipApi({
+          base_url: infobip.base_url,
+          api_key: infobip.api_key,
+          from: infobip.from
+        });
+        
+        const syncResult = await api.syncTemplates();
+        if (syncResult.success && syncResult.data) {
+          result = { success: true, templates: syncResult.data.templates, stats: syncResult.data.stats };
+        } else {
+          throw new Error(syncResult.error || "Falha na sincronização");
+        }
+      } else if (provider === "gupshup") {
+        const api = createGupshupApi({
+          api_key: gupshup.api_key,
+          app: gupshup.app,
+          source: gupshup.source,
+          environment: gupshup.environment
+        });
+        
+        const syncResult = await api.syncTemplates();
+        if (syncResult.success && syncResult.data) {
+          result = { success: true, templates: syncResult.data.templates, stats: syncResult.data.stats };
+        } else {
+          throw new Error(syncResult.error || "Falha na sincronização");
+        }
+      }
+      
+      setTplStats(result.stats);
+      setTplSyncOk(result.success);
+      toast({ 
+        title: "Templates sincronizados", 
+        description: `${result.stats.approved} aprovados, ${result.stats.pending} pendentes, ${result.stats.rejected} rejeitados.`
+      });
+    } catch (error) {
+      setTplSyncOk(false);
+      toast({ 
+        title: "Erro na sincronização", 
+        description: error instanceof Error ? error.message : "Falha ao sincronizar templates",
+        variant: "destructive" 
+      });
+    }
   };
 
   const resendWebhook = async () => {
@@ -137,34 +270,62 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
     toast({ title: "Webhook verificado", description: "Assinatura verificada (simulado)." });
   };
 
-  const handleSave = () => {
-    if (!connOk || !tplSyncOk) return;
-    const id = `num_${Date.now()}`;
+  const handleSave = async () => {
+    if (!connOk || !tplSyncOk || !activeWorkspace) {
+      toast({ title: "Validação necessária", description: "Complete todas as verificações antes de salvar.", variant: "destructive" });
+      return;
+    }
 
-    const mapped: ExtendedNumber = {
-      id,
-      label,
-      provider,
-      status: "ACTIVE",
-      quality,
-      tps,
-      // campos extras capturados pelo wizard
-      phoneE164,
-      usage: (usage || undefined) as any,
-      pools: pools.length ? pools : undefined,
-      canFallback,
-      // provider specifics (mantidos para futura edição)
-      wabaId: provider === "meta" ? meta.waba_id : undefined,
-      phoneId: provider === "meta" ? meta.phone_number_id : undefined,
-      meta: provider === "meta" ? meta : undefined,
-      infobip: provider === "infobip" ? infobip : undefined,
-      gupshup: provider === "gupshup" ? gupshup : undefined,
-      utilityTemplates: [],
-    } as ExtendedNumber;
+    try {
+      const wabaRef = provider === "meta" ? selectedWaba : undefined;
+      if (provider === "meta" && !wabaRef) {
+        throw new Error("WABA deve ser selecionada para Meta Cloud");
+      }
 
-    onSave(mapped);
-    toast({ title: "Número salvo & ativado", description: "Persistido localmente (frontend)." });
-    resetAll();
+      const phoneNumberData = {
+        display_number: phoneE164,
+        phone_number_id: provider === "meta" ? meta.phone_number_id : phoneE164,
+        waba_ref: wabaRef || "",
+        workspace_id: activeWorkspace.id,
+        mps_target: tps,
+        quality_rating: quality,
+        status: "ACTIVE" as const
+      };
+
+      const savedNumber = await savePhoneNumber(phoneNumberData);
+      
+      if (savedNumber) {
+        // Criar objeto compatível com ExtendedNumber para o callback
+        const mapped: ExtendedNumber = {
+          id: savedNumber.id,
+          label,
+          provider,
+          status: "ACTIVE",
+          quality,
+          tps,
+          phoneE164,
+          usage: (usage || undefined) as any,
+          pools: pools.length ? pools : undefined,
+          canFallback,
+          wabaId: provider === "meta" ? meta.waba_id : undefined,
+          phoneId: provider === "meta" ? meta.phone_number_id : undefined,
+          meta: provider === "meta" ? meta : undefined,
+          infobip: provider === "infobip" ? infobip : undefined,
+          gupshup: provider === "gupshup" ? gupshup : undefined,
+          utilityTemplates: [],
+        } as ExtendedNumber;
+
+        onSave(mapped);
+        resetAll();
+        onOpenChange(false);
+      }
+    } catch (error) {
+      toast({ 
+        title: "Erro ao salvar", 
+        description: error instanceof Error ? error.message : "Falha ao salvar número",
+        variant: "destructive" 
+      });
+    }
   };
 
   const togglePool = (p: string) => {
@@ -301,7 +462,22 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
                   <div className="md:col-span-2"><div className="flex items-center gap-1"><Label>Access Token</Label><HelpHint text="Token (System User/long-lived) com escopos whatsapp_business_messaging e whatsapp_business_management." /></div><Input value={meta.access_token} onChange={(e) => setMeta({ ...meta, access_token: e.target.value })} placeholder="EAAG..." /></div>
                   <div><div className="flex items-center gap-1"><Label>Graph API Version</Label><HelpHint text="Versão da Graph API usada nas chamadas (ex.: v19.0)." /></div><Input value={meta.graph_version} onChange={(e) => setMeta({ ...meta, graph_version: e.target.value })} placeholder="v19.0" /></div>
                   <div><div className="flex items-center gap-1"><Label>App ID (opcional)</Label><HelpHint text="ID do App Meta (útil para diagnóstico)." /></div><Input value={meta.app_id} onChange={(e) => setMeta({ ...meta, app_id: e.target.value })} placeholder="1234567890" /></div>
-                  <div className="md:col-span-2"><div className="flex items-center gap-1"><Label>Webhook Verify Token</Label><HelpHint text="Chave usada para validar a assinatura do webhook quando o backend receber eventos." /></div><Input value={meta.webhook_verify_token} onChange={(e) => setMeta({ ...meta, webhook_verify_token: e.target.value })} placeholder="minha-chave-webhook" /></div>
+                  <div className="md:col-span-2">
+                    <div className="flex items-center gap-1">
+                      <Label>WABA Configurada</Label>
+                      <HelpHint text="Selecione a WABA já configurada na aba de credenciais." />
+                    </div>
+                    <Select value={selectedWaba} onValueChange={setSelectedWaba}>
+                      <SelectTrigger><SelectValue placeholder="Selecione uma WABA" /></SelectTrigger>
+                      <SelectContent>
+                        {wabas.map(waba => (
+                          <SelectItem key={waba.id} value={waba.id}>
+                            {waba.name || waba.waba_id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">

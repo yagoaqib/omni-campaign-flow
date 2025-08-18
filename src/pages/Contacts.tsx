@@ -8,10 +8,12 @@ import { NumberValidation } from "@/components/contacts/NumberValidation"
 import { TagManager } from "@/components/contacts/TagManager"
 import { ContactTagging } from "@/components/contacts/ContactTagging"
 import { useState } from "react"
+import { useContacts } from "@/hooks/useContacts"
 
 const Contacts = () => {
   const [tags, setTags] = useState([]);
-  const lists = [
+  const { contactLists, totalStats, loading, createContactList } = useContacts();
+  const lists = contactLists.length > 0 ? contactLists : [
     {
       id: 1,
       name: "Clientes Premium",
@@ -103,7 +105,7 @@ const Contacts = () => {
               <div className="flex items-center gap-3">
                 <Users className="w-8 h-8 text-primary" />
                 <div>
-                  <div className="text-2xl font-bold">39,226</div>
+                  <div className="text-2xl font-bold">{totalStats.total.toLocaleString()}</div>
                   <div className="text-sm text-muted-foreground">Total de Contatos</div>
                 </div>
               </div>
@@ -116,7 +118,7 @@ const Contacts = () => {
                   <div className="w-4 h-4 bg-success rounded-full"></div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">34,891</div>
+                  <div className="text-2xl font-bold">{totalStats.withWhatsapp.toLocaleString()}</div>
                   <div className="text-sm text-muted-foreground">Com WhatsApp</div>
                 </div>
               </div>
@@ -129,7 +131,7 @@ const Contacts = () => {
                   <div className="w-4 h-4 bg-warning rounded-full"></div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">4,335</div>
+                  <div className="text-2xl font-bold">{totalStats.withoutWhatsapp.toLocaleString()}</div>
                   <div className="text-sm text-muted-foreground">Sem WhatsApp</div>
                 </div>
               </div>
@@ -142,7 +144,7 @@ const Contacts = () => {
                   <Filter className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">12</div>
+                  <div className="text-2xl font-bold">{totalStats.activeLists}</div>
                   <div className="text-sm text-muted-foreground">Listas Ativas</div>
                 </div>
               </div>
