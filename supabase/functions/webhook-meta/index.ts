@@ -119,6 +119,19 @@ Deno.serve(async (req) => {
               })
               .eq('name', templateUpdate.message_template_name)
               .eq('workspace_id', validWaba.workspace_id);
+
+            // Create notification for template status change
+            if (templateUpdate.event === 'REJECTED') {
+              await supabase.functions.invoke('notify', {
+                body: {
+                  type: 'template_rejected',
+                  workspaceId: validWaba.workspace_id,
+                  title: 'Template rejeitado',
+                  message: `O template "${templateUpdate.message_template_name}" foi rejeitado pela Meta`,
+                  metadata: { templateName: templateUpdate.message_template_name, reason: templateUpdate.reason }
+                }
+              });
+            }
           }
         }
       }

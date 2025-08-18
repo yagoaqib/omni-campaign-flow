@@ -171,6 +171,24 @@ Deno.serve(async (req) => {
             });
           } else {
             // Handle API error - mark for retry or failure
+            console.error('Meta API error:', metaResult);
+            
+            // Create notification for failed message
+            await fetch(`${supabaseUrl}/functions/v1/notify`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                type: 'message_failed',
+                workspaceId: '', // TODO: get workspace from campaign
+                title: 'Falha no envio de mensagem',
+                message: `Erro ao enviar mensagem: ${metaResult.error?.message || 'Erro desconhecido'}`,
+                metadata: { jobId: job.id, errorCode: metaResult.error?.code }
+              })
+            });
+
             updates.push({ 
               id: job.id, 
               phone_number_ref: meta.id, 

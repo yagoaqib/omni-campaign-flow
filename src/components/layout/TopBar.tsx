@@ -14,6 +14,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { useWorkspace } from "@/hooks/useWorkspace"
+import { useNotifications } from "@/hooks/useNotifications"
+import { formatDistanceToNow } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 // Fallback for demo/mock data
 const mockWorkspaces = [
@@ -22,14 +25,9 @@ const mockWorkspaces = [
   { id: "3", name: "Cliente C", status: "offline" },
 ]
 
-const alerts = [
-  { id: 1, type: "quality", message: "Quality drop em WABA-01", workspace: "Cliente A", time: "2 min" },
-  { id: 2, type: "tier", message: "Tier 90% atingido WABA-02", workspace: "Cliente B", time: "5 min" },
-  { id: 3, type: "429", message: "429 burst detectado", workspace: "Cliente A", time: "8 min" },
-]
-
 export function TopBar() {
   const { activeWorkspace, workspaces, loadWorkspaces, switchWorkspace } = useWorkspace();
+  const { notifications, unreadCount, markAsRead } = useNotifications();
   
   useEffect(() => {
     loadWorkspaces();
@@ -122,29 +120,47 @@ export function TopBar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative" aria-label="Notificações">
               <Bell className="w-4 h-4" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full flex items-center justify-center">
-                <span className="text-[10px] text-destructive-foreground font-medium">{alerts.length}</span>
-              </div>
+              {unreadCount > 0 && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-destructive rounded-full flex items-center justify-center">
+                  <span className="text-[10px] text-destructive-foreground font-medium">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                </div>
+              )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Alertas Recentes</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+            <DropdownMenuLabel>Notificações Recentes</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {alerts.map((alert) => (
-              <DropdownMenuItem key={alert.id} className="flex flex-col items-start gap-1 py-3">
+            {notifications.slice(0, 10).map((notification) => (
+              <DropdownMenuItem 
+                key={notification.id} 
+                className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                onClick={() => markAsRead(notification.id)}
+              >
                 <div className="flex items-center gap-2 w-full">
                   <AlertTriangle className={`w-4 h-4 ${
-                    alert.type === '429' ? 'text-destructive' : 
-                    alert.type === 'tier' ? 'text-warning' : 'text-muted-foreground'
+                    notification.type === 'template_rejected' || notification.type === 'message_failed' 
+                      ? 'text-destructive' : 
+                    notification.type === 'webhook_error' 
+                      ? 'text-warning' : 'text-success'
                   }`} />
-                  <span className="font-medium text-sm">{alert.message}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">{alert.time}</span>
+                  <span className="font-medium text-sm">{notification.title}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {formatDistanceToNow(new Date(notification.createdAt), {
+                      addSuffix: true,
+                      locale: ptBR
+                    })}
+                  </span>
+                  {!notification.read && (
+                    <div className="w-2 h-2 bg-primary rounded-full" />
+                  )}
                 </div>
-                <span className="text-xs text-muted-foreground pl-6">{alert.workspace}</span>
+                <span className="text-xs text-muted-foreground pl-6">{notification.message}</span>
               </DropdownMenuItem>
             ))}
-            {alerts.length === 0 && (
-              <DropdownMenuItem disabled>Nenhum alerta recente</DropdownMenuItem>
+            {notifications.length === 0 && (
+              <DropdownMenuItem disabled>Nenhuma notificação recente</DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
