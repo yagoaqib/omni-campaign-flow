@@ -29,17 +29,7 @@ import {
   Plus
 } from "lucide-react";
 import { useState } from "react";
-
-interface Contact {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  tags: string[];
-  lastContact?: string;
-  hasWhatsapp: boolean;
-  source: string;
-}
+import { Contact } from "@/hooks/useContacts";
 
 interface Tag {
   id: string;
@@ -69,7 +59,8 @@ export function ContactTagging({ tags, contacts: initialContacts, onContactUpdat
 
   // Filtrar contatos
   const filteredContacts = contacts.filter(contact => {
-    const matchesSearch = contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const name = contact.name || "Sem nome";
+    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          contact.phone.includes(searchTerm) ||
                          contact.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -239,7 +230,7 @@ export function ContactTagging({ tags, contacts: initialContacts, onContactUpdat
                 <div className="flex items-center gap-3 mb-2">
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">{contact.name}</span>
+                    <span className="font-medium">{contact.name || "Sem nome"}</span>
                     <div className={`w-2 h-2 rounded-full ${contact.hasWhatsapp ? 'bg-success' : 'bg-muted'}`} />
                   </div>
                   
