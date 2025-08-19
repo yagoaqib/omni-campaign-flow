@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
@@ -17,6 +18,7 @@ import { useWorkspace } from "@/hooks/useWorkspace"
 import { useNotifications } from "@/hooks/useNotifications"
 import { useRealTimeMetrics } from "@/hooks/useRealTimeMetrics"
 import { useBalance } from "@/hooks/useBalance"
+import { useUserProfile } from "@/hooks/useUserProfile"
 // import { useToast } from "@/hooks/use-toast"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -41,6 +43,7 @@ export function TopBar() {
   const { notifications, unreadCount, markAsRead } = useNotifications();
   const { metrics, loading: metricsLoading } = useRealTimeMetrics();
   const { balance, loading: balanceLoading } = useBalance();
+  const { profile, loadProfile, getInitials } = useUserProfile();
   const [showNewWorkspaceDialog, setShowNewWorkspaceDialog] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
   // const { toast } = useToast();
@@ -48,6 +51,12 @@ export function TopBar() {
   useEffect(() => {
     loadWorkspaces();
   }, [loadWorkspaces]);
+
+  useEffect(() => {
+    if (activeWorkspace?.id) {
+      loadProfile(activeWorkspace.id);
+    }
+  }, [activeWorkspace?.id, loadProfile]);
 
   const handleCreateWorkspace = async () => {
     if (!newWorkspaceName.trim()) return;
@@ -62,9 +71,18 @@ export function TopBar() {
     }
   };
 
+  const handleWhatsAppSupport = () => {
+    const supportNumber = "5592981205772";
+    const message = "Olá! Preciso de suporte com o sistema de campanhas.";
+    const whatsappUrl = `https://wa.me/${supportNumber}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   // Use real workspaces only
   const displayWorkspaces = workspaces;
   const currentWorkspace = activeWorkspace || (workspaces.length > 0 ? workspaces[0] : { name: "Nenhum workspace", id: "" });
+  const userName = profile?.name || "Usuário";
+  const userInitials = getInitials(userName);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -238,16 +256,24 @@ export function TopBar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-9 px-3 gap-2">
               <div className="w-6 h-6 bg-gradient-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-medium">
-                JD
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt={userName} className="w-6 h-6 rounded-full" />
+                ) : (
+                  userInitials
+                )}
               </div>
               <ChevronDown className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>João da Silva</DropdownMenuLabel>
+            <DropdownMenuLabel>{userName}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Configurações</DropdownMenuItem>
-            <DropdownMenuItem>Suporte</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/profile">Configurações</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleWhatsAppSupport}>
+              Suporte
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Sair</DropdownMenuItem>
           </DropdownMenuContent>

@@ -11,7 +11,8 @@ import {
   Search,
   Bell,
   ChevronLeft,
-  Gauge
+  Gauge,
+  User
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
@@ -40,6 +41,7 @@ const mainNavItems = [
 
 const adminNavItems = [
   { title: "Integrações", url: "/admin", icon: Settings },
+  { title: "Perfil", url: "/profile", icon: User },
   { title: "Logs", url: "/logs", icon: FileSearch },
 ]
 
