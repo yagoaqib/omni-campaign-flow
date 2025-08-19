@@ -7,6 +7,7 @@ import { Search, Upload, Download, Users, Filter, Plus, Shield, Tags } from "luc
 import { NumberValidation } from "@/components/contacts/NumberValidation"
 import { TagManager } from "@/components/contacts/TagManager"
 import { ContactTagging } from "@/components/contacts/ContactTagging"
+import { AdvancedSegmentation } from "@/components/contacts/AdvancedSegmentation"
 import { useState } from "react"
 import { useContactsManagement } from "@/hooks/useContactsManagement"
 
@@ -227,6 +228,15 @@ const Contacts = () => {
             onContactUpdate={updateContactTags}
           />
         </div>
+
+        {/* Advanced Segmentation */}
+        <AdvancedSegmentation 
+          contacts={contacts}
+          tags={tags}
+          onCreateAudience={(name, filters) => {
+            console.log("Created audience:", name, filters);
+          }}
+        />
 
         {/* Number Validation Section */}
         <NumberValidation 

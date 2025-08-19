@@ -45,7 +45,7 @@ interface Contact {
 interface ContactTaggingProps {
   tags: ContactTag[];
   contacts: Contact[];
-  onContactUpdate?: (contactId: string, newTags: string[]) => void;
+  onContactUpdate?: (contactId: string, newTags: string[]) => Promise<void>;
 }
 
 export function ContactTagging({ tags, contacts: initialContacts, onContactUpdate }: ContactTaggingProps) {
@@ -74,41 +74,50 @@ export function ContactTagging({ tags, contacts: initialContacts, onContactUpdat
   });
 
   // Aplicar tags em massa
-  const applyTagsToSelected = (tagIds: string[]) => {
-    setContacts(contacts.map(contact => {
-      if (selectedContacts.includes(contact.id)) {
-        const updatedTags = [...new Set([...contact.tags, ...tagIds])];
-        onContactUpdate?.(contact.id, updatedTags);
-        return { ...contact, tags: updatedTags };
+  const applyTagsToSelected = async (tagIds: string[]) => {
+    try {
+      for (const contactId of selectedContacts) {
+        const contact = contacts.find(c => c.id === contactId);
+        if (contact) {
+          const updatedTags = [...new Set([...contact.tags, ...tagIds])];
+          await onContactUpdate?.(contactId, updatedTags);
+        }
       }
-      return contact;
-    }));
+      // Reload contacts to show updated tags
+      window.location.reload(); // TODO: improve this with proper state management
+    } catch (error) {
+      console.error('Error applying tags:', error);
+    }
     setSelectedContacts([]);
     setIsTagDialogOpen(false);
   };
 
   // Remover tag específica de um contato
-  const removeTagFromContact = (contactId: string, tagId: string) => {
-    setContacts(contacts.map(contact => {
-      if (contact.id === contactId) {
+  const removeTagFromContact = async (contactId: string, tagId: string) => {
+    try {
+      const contact = contacts.find(c => c.id === contactId);
+      if (contact) {
         const updatedTags = contact.tags.filter(t => t !== tagId);
-        onContactUpdate?.(contactId, updatedTags);
-        return { ...contact, tags: updatedTags };
+        await onContactUpdate?.(contactId, updatedTags);
+        window.location.reload(); // TODO: improve this with proper state management
       }
-      return contact;
-    }));
+    } catch (error) {
+      console.error('Error removing tag:', error);
+    }
   };
 
   // Adicionar tag específica a um contato
-  const addTagToContact = (contactId: string, tagId: string) => {
-    setContacts(contacts.map(contact => {
-      if (contact.id === contactId && !contact.tags.includes(tagId)) {
+  const addTagToContact = async (contactId: string, tagId: string) => {
+    try {
+      const contact = contacts.find(c => c.id === contactId);
+      if (contact && !contact.tags.includes(tagId)) {
         const updatedTags = [...contact.tags, tagId];
-        onContactUpdate?.(contactId, updatedTags);
-        return { ...contact, tags: updatedTags };
+        await onContactUpdate?.(contactId, updatedTags);
+        window.location.reload(); // TODO: improve this with proper state management
       }
-      return contact;
-    }));
+    } catch (error) {
+      console.error('Error adding tag:', error);
+    }
   };
 
   // Toggle seleção de contato

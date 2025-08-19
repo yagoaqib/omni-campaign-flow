@@ -35,7 +35,7 @@ import { ContactTag } from "@/hooks/useContactsManagement";
 
 interface TagManagerProps {
   tags: ContactTag[];
-  onSaveTag: (tag: Omit<ContactTag, 'id' | 'created_at' | 'updated_at'>) => Promise<ContactTag | null>;
+  onSaveTag: (tag: Partial<ContactTag>) => Promise<ContactTag | null>;
   onUpdateTag: (tagId: string, updates: Partial<ContactTag>) => Promise<void>;
   onDeleteTag: (tagId: string) => Promise<void>;
 }
@@ -80,7 +80,8 @@ export function TagManager({ tags, onSaveTag, onUpdateTag, onDeleteTag }: TagMan
         color: newTag.color,
         category: newTag.category,
         description: newTag.description,
-        contact_count: 0
+        contact_count: 0,
+        workspace_id: "" // Will be set by the hook
       });
     }
 

@@ -9,7 +9,7 @@ export interface ContactTag {
   name: string;
   description?: string;
   color: string;
-  category: 'custom' | 'system' | 'imported';
+  category: 'custom' | 'funnel' | 'behavior';
   contact_count: number;
   created_at: string;
   updated_at: string;

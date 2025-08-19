@@ -1,34 +1,26 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspace } from './useWorkspace';
-import { useToast } from './use-toast';
+import { useContactTags } from './useContactTags';
+import { toast } from 'sonner';
 
-export interface ContactTag {
+export interface Contact {
   id: string;
-  name: string;
-  color: string;
-  category: "funnel" | "behavior" | "custom";
-  description?: string;
-  contact_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ContactData {
-  id: string;
-  name?: string;
+  workspace_id: string;
   phone: string;
+  name?: string;
   email?: string;
   source: string;
   has_whatsapp: boolean;
   last_contact?: string;
-  tags: string[];
   created_at: string;
   updated_at: string;
+  tags: string[]; // Array of tag IDs
 }
 
 export interface ContactList {
   id: string;
+  workspace_id: string;
   name: string;
   status: string;
   contact_count: number;
@@ -36,318 +28,185 @@ export interface ContactList {
   updated_at: string;
 }
 
+export interface ContactTag {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description?: string;
+  color: string;
+  category: 'custom' | 'funnel' | 'behavior';
+  contact_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export function useContactsManagement() {
-  const { activeWorkspace } = useWorkspace();
-  const { toast } = useToast();
-  const [tags, setTags] = useState<ContactTag[]>([]);
-  const [contacts, setContacts] = useState<ContactData[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [contactLists, setContactLists] = useState<ContactList[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { activeWorkspace } = useWorkspace();
+  const { tags, loadTags, createTag, updateTag, deleteTag, assignTagToContact, removeTagFromContact } = useContactTags();
 
-  // Carregar tags
-  const loadTags = async () => {
-    if (!activeWorkspace) return;
+  const [totalStats, setTotalStats] = useState({
+    total: 0,
+    withWhatsapp: 0,
+    withoutWhatsapp: 0,
+    activeLists: 0
+  });
 
-    try {
-      const { data, error } = await supabase
-        .from('contact_tags')
-        .select('*')
-        .eq('workspace_id', activeWorkspace.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setTags((data || []).map(tag => ({
-        ...tag,
-        category: tag.category as "funnel" | "behavior" | "custom"
-      })));
-    } catch (error) {
-      console.error('Erro ao carregar tags:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Falha ao carregar tags", 
-        variant: "destructive" 
-      });
-    }
-  };
-
-  // Carregar contatos com suas tags
   const loadContacts = async () => {
-    if (!activeWorkspace) return;
+    if (!activeWorkspace?.id) return;
 
     try {
+      setLoading(true);
+      
+      // Load contacts
       const { data: contactsData, error: contactsError } = await supabase
         .from('contacts')
         .select('*')
-        .eq('workspace_id', activeWorkspace.id)
-        .order('created_at', { ascending: false });
+        .eq('workspace_id', activeWorkspace.id);
 
       if (contactsError) throw contactsError;
 
-      // Carregar tags para cada contato
-      const contactsWithTags = await Promise.all(
-        (contactsData || []).map(async (contact) => {
-          const { data: tagAssignments } = await supabase
-            .from('contact_tag_assignments')
-            .select('tag_id')
-            .eq('contact_id', contact.id);
+      // Load contact tag assignments separately
+      const { data: tagAssignments } = await supabase
+        .from('contact_tag_assignments')
+        .select('contact_id, tag_id');
 
-          return {
-            ...contact,
-            tags: tagAssignments?.map(ta => ta.tag_id) || []
-          };
-        })
-      );
+      // Process contacts and group tags
+      const processedContacts: Contact[] = (contactsData || []).map((contact: any) => ({
+        ...contact,
+        tags: (tagAssignments || [])
+          .filter(assignment => assignment.contact_id === contact.id)
+          .map(assignment => assignment.tag_id)
+      }));
 
-      setContacts(contactsWithTags);
-    } catch (error) {
-      console.error('Erro ao carregar contatos:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Falha ao carregar contatos", 
-        variant: "destructive" 
+      setContacts(processedContacts);
+
+      // Calculate stats
+      setTotalStats({
+        total: processedContacts.length,
+        withWhatsapp: processedContacts.filter(c => c.has_whatsapp).length,
+        withoutWhatsapp: processedContacts.filter(c => !c.has_whatsapp).length,
+        activeLists: contactLists.filter(l => l.status === 'active').length
       });
+
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+      toast.error('Erro ao carregar contatos');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Carregar listas de contatos
   const loadContactLists = async () => {
-    if (!activeWorkspace) return;
+    if (!activeWorkspace?.id) return;
 
     try {
       const { data, error } = await supabase
         .from('contact_lists')
         .select('*')
         .eq('workspace_id', activeWorkspace.id)
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setContactLists(data || []);
+      setContactLists((data as any) || []);
     } catch (error) {
-      console.error('Erro ao carregar listas:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Falha ao carregar listas", 
-        variant: "destructive" 
-      });
+      console.error('Error loading contact lists:', error);
+      toast.error('Erro ao carregar listas de contatos');
     }
   };
 
-  // Salvar tag
-  const saveTag = async (tagData: Omit<ContactTag, 'id' | 'created_at' | 'updated_at'>) => {
-    if (!activeWorkspace) return null;
-
+  const saveTag = async (tagData: Partial<ContactTag>) => {
     try {
-      const { data, error } = await supabase
-        .from('contact_tags')
-        .insert([{
-          ...tagData,
-          workspace_id: activeWorkspace.id
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      
+      const result = await createTag(tagData);
       await loadTags();
-      toast({ title: "Sucesso", description: "Tag criada com sucesso" });
-      
-      return {
-        ...data,
-        category: data.category as "funnel" | "behavior" | "custom"
-      } as ContactTag;
+      return result as ContactTag;
     } catch (error) {
-      console.error('Erro ao salvar tag:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Falha ao criar tag", 
-        variant: "destructive" 
-      });
+      console.error('Error saving tag:', error);
       return null;
     }
   };
 
-  // Atualizar tag
-  const updateTag = async (tagId: string, updates: Partial<ContactTag>) => {
+  const updateContactTags = async (contactId: string, newTags: string[]) => {
     try {
-      const { error } = await supabase
-        .from('contact_tags')
-        .update(updates)
-        .eq('id', tagId);
-
-      if (error) throw error;
-      
-      await loadTags();
-      toast({ title: "Sucesso", description: "Tag atualizada com sucesso" });
-    } catch (error) {
-      console.error('Erro ao atualizar tag:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Falha ao atualizar tag", 
-        variant: "destructive" 
-      });
-    }
-  };
-
-  // Deletar tag
-  const deleteTag = async (tagId: string) => {
-    try {
-      // Primeiro remover todas as atribuições da tag
-      await supabase
+      // Get current tags for this contact
+      const { data: currentAssignments } = await supabase
         .from('contact_tag_assignments')
-        .delete()
-        .eq('tag_id', tagId);
-
-      // Depois deletar a tag
-      const { error } = await supabase
-        .from('contact_tags')
-        .delete()
-        .eq('id', tagId);
-
-      if (error) throw error;
-      
-      await loadTags();
-      await loadContacts();
-      toast({ title: "Sucesso", description: "Tag removida com sucesso" });
-    } catch (error) {
-      console.error('Erro ao deletar tag:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Falha ao remover tag", 
-        variant: "destructive" 
-      });
-    }
-  };
-
-  // Salvar contato
-  const saveContact = async (contactData: Omit<ContactData, 'id' | 'tags' | 'created_at' | 'updated_at'>) => {
-    if (!activeWorkspace) return null;
-
-    try {
-      const { data, error } = await supabase
-        .from('contacts')
-        .insert([{
-          ...contactData,
-          workspace_id: activeWorkspace.id
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      await loadContacts();
-      toast({ title: "Sucesso", description: "Contato criado com sucesso" });
-      return data;
-    } catch (error) {
-      console.error('Erro ao salvar contato:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Falha ao criar contato", 
-        variant: "destructive" 
-      });
-      return null;
-    }
-  };
-
-  // Atualizar tags de um contato
-  const updateContactTags = async (contactId: string, tagIds: string[]) => {
-    try {
-      // Remover tags existentes
-      await supabase
-        .from('contact_tag_assignments')
-        .delete()
+        .select('tag_id')
         .eq('contact_id', contactId);
 
-      // Adicionar novas tags
-      if (tagIds.length > 0) {
-        const assignments = tagIds.map(tagId => ({
-          contact_id: contactId,
-          tag_id: tagId
-        }));
+      const currentTagIds = (currentAssignments || []).map(a => a.tag_id);
 
-        const { error } = await supabase
-          .from('contact_tag_assignments')
-          .insert(assignments);
-
-        if (error) throw error;
+      // Remove tags that are no longer assigned
+      const tagsToRemove = currentTagIds.filter(tagId => !newTags.includes(tagId));
+      for (const tagId of tagsToRemove) {
+        await removeTagFromContact(contactId, tagId);
       }
 
+      // Add new tags
+      const tagsToAdd = newTags.filter(tagId => !currentTagIds.includes(tagId));
+      for (const tagId of tagsToAdd) {
+        await assignTagToContact(contactId, tagId);
+      }
+
+      // Reload contacts and tags
       await loadContacts();
-      toast({ title: "Sucesso", description: "Tags do contato atualizadas" });
+      await loadTags();
+      
+      toast.success('Tags atualizadas com sucesso');
     } catch (error) {
-      console.error('Erro ao atualizar tags:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Falha ao atualizar tags", 
-        variant: "destructive" 
-      });
+      console.error('Error updating contact tags:', error);
+      toast.error('Erro ao atualizar tags do contato');
     }
   };
 
-  // Criar lista de contatos
-  const createContactList = async (listData: Omit<ContactList, 'id' | 'created_at' | 'updated_at'>) => {
-    if (!activeWorkspace) return null;
+  const createContactList = async (name: string) => {
+    if (!activeWorkspace?.id) return;
 
     try {
       const { data, error } = await supabase
         .from('contact_lists')
-        .insert([{
-          ...listData,
-          workspace_id: activeWorkspace.id
-        }])
+        .insert({
+          name,
+          workspace_id: activeWorkspace.id,
+          status: 'active',
+          contact_count: 0
+        })
         .select()
         .single();
 
       if (error) throw error;
-      
+
       await loadContactLists();
-      toast({ title: "Sucesso", description: "Lista criada com sucesso" });
+      toast.success('Lista criada com sucesso');
       return data;
     } catch (error) {
-      console.error('Erro ao criar lista:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Falha ao criar lista", 
-        variant: "destructive" 
-      });
-      return null;
+      console.error('Error creating contact list:', error);
+      toast.error('Erro ao criar lista');
+      throw error;
     }
   };
 
-  // Carregar dados iniciais
   useEffect(() => {
-    if (activeWorkspace) {
-      setLoading(true);
-      Promise.all([
-        loadTags(),
-        loadContacts(),
-        loadContactLists()
-      ]).finally(() => setLoading(false));
+    if (activeWorkspace?.id) {
+      loadContacts();
+      loadContactLists();
     }
-  }, [activeWorkspace]);
-
-  // Estatísticas calculadas
-  const totalStats = {
-    total: contacts.length,
-    withWhatsapp: contacts.filter(c => c.has_whatsapp).length,
-    withoutWhatsapp: contacts.filter(c => !c.has_whatsapp).length,
-    activeLists: contactLists.filter(l => l.status === 'active').length
-  };
+  }, [activeWorkspace?.id]);
 
   return {
-    // Estado
-    tags,
     contacts,
     contactLists,
-    loading,
+    tags,
     totalStats,
-    
-    // Métodos
+    loading,
+    loadContacts,
+    loadContactLists,
     saveTag,
     updateTag,
     deleteTag,
-    saveContact,
     updateContactTags,
-    createContactList,
-    refreshData: () => Promise.all([loadTags(), loadContacts(), loadContactLists()])
+    createContactList
   };
 }
