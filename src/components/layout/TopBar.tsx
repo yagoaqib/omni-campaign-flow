@@ -20,7 +20,7 @@ import { useRealTimeMetrics } from "@/hooks/useRealTimeMetrics"
 import { useBalance } from "@/hooks/useBalance"
 import { useAuth } from "@/hooks/useAuth"
 import { useUserProfile } from "@/hooks/useUserProfile"
-// import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -48,7 +48,7 @@ export function TopBar() {
   const { signOut } = useAuth();
   const [showNewWorkspaceDialog, setShowNewWorkspaceDialog] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
-  // const { toast } = useToast();
+  const { toast } = useToast();
   
   useEffect(() => {
     loadWorkspaces();
@@ -63,13 +63,23 @@ export function TopBar() {
   const handleCreateWorkspace = async () => {
     if (!newWorkspaceName.trim()) return;
     
-    const result = await createWorkspace(newWorkspaceName);
-    if (result) {
-      console.log("Workspace created successfully:", newWorkspaceName);
-      setNewWorkspaceName("");
-      setShowNewWorkspaceDialog(false);
-    } else {
-      console.error("Failed to create workspace");
+    try {
+      const result = await createWorkspace(newWorkspaceName);
+      if (result) {
+        toast({
+          title: "Workspace criado com sucesso",
+          description: `O workspace "${newWorkspaceName}" foi criado e você foi adicionado como proprietário.`,
+        });
+        setNewWorkspaceName("");
+        setShowNewWorkspaceDialog(false);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao criar workspace",
+        description: error.message || "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive",
+      });
+      console.error("Failed to create workspace:", error);
     }
   };
 

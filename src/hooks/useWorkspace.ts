@@ -140,21 +140,32 @@ export function useWorkspace() {
         await loadWorkspaces();
         return { id: workspaceId, name };
       } else {
-        // Normal workspace creation
-        const { data, error } = await supabase
+        // Normal workspace creation - create workspace and membership
+        const { data: workspaceData, error: workspaceError } = await supabase
           .from("workspaces")
           .insert({ name })
           .select()
           .single();
 
-        if (error) throw error;
+        if (workspaceError) throw workspaceError;
+
+        // Add current user as owner of the workspace
+        const { error: memberError } = await supabase
+          .from("members")
+          .insert({
+            user_id: (await supabase.auth.getUser()).data.user?.id,
+            workspace_id: workspaceData.id,
+            role: 'owner'
+          });
+
+        if (memberError) throw memberError;
         
         await loadWorkspaces();
-        return data;
+        return workspaceData;
       }
     } catch (error) {
       console.error("Failed to create workspace:", error);
-      return null;
+      throw error; // Re-throw to let caller handle it
     }
   }, [loadWorkspaces]);
 
