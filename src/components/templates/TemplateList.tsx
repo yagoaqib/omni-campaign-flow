@@ -42,10 +42,11 @@ export default function TemplateList({ templates, onEdit, onSync, loadTemplates 
       const template = templates.find(t => t.id === templateId);
       if (!template) return;
 
-      // Get phone numbers for this template
+      // Get phone numbers for this workspace
       const { data: phoneNumbers } = await supabase
         .from('phone_numbers')
-        .select('id, display_number');
+        .select('id, display_number')
+        .eq('workspace_id', 'workspace-id'); // TODO: get from context
 
       if (!phoneNumbers || phoneNumbers.length === 0) {
         toast.error("Nenhum número encontrado para sincronização");

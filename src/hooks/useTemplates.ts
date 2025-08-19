@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { TemplateModel } from "@/components/templates/types";
 
-type Template = Database["public"]["Tables"]["templates"]["Row"];
+type MessageTemplate = Database["public"]["Tables"]["message_templates"]["Row"];
 
 export function useTemplates() {
   const [templates, setTemplates] = useState<TemplateModel[]>([]);
@@ -13,29 +13,45 @@ export function useTemplates() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("templates")
+        .from("message_templates")
         .select("*")
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Convert Supabase data to TemplateModel format
-      const convertedTemplates: TemplateModel[] = data.map(template => {
-        const schema = template.components_schema as any;
+      // Convert message_templates data to TemplateModel format with proper schema parsing
+      const convertedTemplates: TemplateModel[] = (data || []).map(template => {
+        const schema = (template.components_schema as any[]) || [];
+        
+        // Extract components from schema array
+        const headerComponent = schema.find(c => c.type === 'HEADER');
+        const bodyComponent = schema.find(c => c.type === 'BODY');
+        const footerComponent = schema.find(c => c.type === 'FOOTER');
+        const buttonsComponent = schema.find(c => c.type === 'BUTTONS');
+        
+        // For now, we'll fetch statuses separately when needed
+        const wabaStatuses: any[] = [];
+
         return {
           id: template.id,
           name: template.name,
           language: template.language,
           category: template.category as any,
-          headerType: schema?.header?.type || "NONE",
-          headerText: schema?.header?.text,
-          body: schema?.body?.text || "",
-          footer: schema?.footer?.text,
-          buttons: schema?.buttons || [],
+          headerType: headerComponent?.format || "NONE",
+          headerText: headerComponent?.text,
+          body: bodyComponent?.text || "",
+          footer: footerComponent?.text,
+          buttons: buttonsComponent?.buttons?.map((btn: any) => ({
+            id: crypto.randomUUID(),
+            type: btn.type,
+            text: btn.text,
+            url: btn.url,
+            phone: btn.phone_number
+          })) || [],
           createdAt: template.created_at,
-          updatedAt: template.created_at,
-          wabaStatuses: []
+          updatedAt: template.updated_at,
+          wabaStatuses
         };
       });
 
@@ -50,28 +66,54 @@ export function useTemplates() {
 
   const saveTemplate = useCallback(async (template: TemplateModel, workspaceId: string, wabaId: string) => {
     try {
+      // Build proper components_schema array for message_templates
+      const components_schema = [];
+      
+      if (template.headerType && template.headerType !== "NONE") {
+        components_schema.push({
+          type: 'HEADER',
+          format: template.headerType,
+          text: template.headerText
+        });
+      }
+      
+      if (template.body) {
+        components_schema.push({
+          type: 'BODY',
+          text: template.body
+        });
+      }
+      
+      if (template.footer) {
+        components_schema.push({
+          type: 'FOOTER',
+          text: template.footer
+        });
+      }
+      
+      if (template.buttons && template.buttons.length > 0) {
+        components_schema.push({
+          type: 'BUTTONS',
+          buttons: template.buttons.map(btn => ({
+            type: btn.type,
+            text: btn.text,
+            url: btn.url,
+            phone_number: btn.phone
+          }))
+        });
+      }
+
       const { error } = await supabase
-        .from("templates")
+        .from("message_templates")
         .upsert({
           id: template.id,
           name: template.name,
           language: template.language,
           category: template.category,
-          components_schema: {
-            header: { type: template.headerType, text: template.headerText },
-            body: { text: template.body },
-            footer: template.footer ? { text: template.footer } : null,
-            buttons: template.buttons.map(btn => ({
-              id: btn.id,
-              type: btn.type,
-              text: btn.text,
-              url: btn.url || null,
-              phone: btn.phone || null
-            }))
-          } as any,
+          components_schema,
           workspace_id: workspaceId,
-          waba_ref: wabaId,
-          status: "DRAFT"
+          waba_id: wabaId,
+          status: "PENDING"
         });
 
       if (error) throw error;
@@ -94,7 +136,7 @@ export function useTemplates() {
   const deleteTemplate = useCallback(async (templateId: string) => {
     try {
       const { error } = await supabase
-        .from("templates")
+        .from("message_templates")
         .delete()
         .eq("id", templateId);
 

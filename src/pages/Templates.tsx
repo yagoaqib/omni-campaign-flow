@@ -6,6 +6,7 @@ import { RefreshCw, PlusCircle } from "lucide-react"
 import TemplateBuilder from "@/components/templates/TemplateBuilder"
 import TemplateList from "@/components/templates/TemplateList"
 import WABAStatusMatrix from "@/components/templates/WABAStatusMatrix"
+import { TemplateStatusDisplay } from "@/components/templates/TemplateStatusDisplay"
 import { TemplateModel, WABAStatus } from "@/components/templates/types"
 import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
@@ -32,27 +33,47 @@ const Templates = () => {
     setLoading(true)
     try {
       const { data, error } = await supabase
-        .from("templates")
+        .from("message_templates")
         .select("*")
         .eq("workspace_id", activeWorkspace.id)
         .order("created_at", { ascending: false })
 
       if (error) throw error
       
-      // Convert Supabase data to TemplateModel format
-      const convertedTemplates: TemplateModel[] = data.map(template => ({
-        id: template.id,
-        name: template.name,
-        language: template.language,
-        category: template.category as any,
-        headerType: "NONE" as any, // This should be extracted from components_schema
-        body: "", // This should be extracted from components_schema  
-        footer: "", // This should be extracted from components_schema
-        buttons: [], // This should be extracted from components_schema
-        createdAt: template.created_at,
-        updatedAt: template.created_at,
-        wabaStatuses: []
-      }))
+      // Convert message_templates data to TemplateModel format with real components_schema mapping
+      const convertedTemplates: TemplateModel[] = (data || []).map(template => {
+        const schema = (template.components_schema as any[]) || [];
+        
+        // Extract header info
+        const headerComponent = schema.find((c: any) => c.type === 'HEADER');
+        const bodyComponent = schema.find((c: any) => c.type === 'BODY');
+        const footerComponent = schema.find((c: any) => c.type === 'FOOTER');
+        const buttonsComponent = schema.find((c: any) => c.type === 'BUTTONS');
+        
+        // For now, status will be loaded separately when needed
+        const wabaStatuses: any[] = [];
+
+        return {
+          id: template.id,
+          name: template.name,
+          language: template.language,
+          category: template.category as any,
+          headerType: headerComponent?.format || "NONE",
+          headerText: headerComponent?.text,
+          body: bodyComponent?.text || "",
+          footer: footerComponent?.text,
+          buttons: buttonsComponent?.buttons?.map((btn: any) => ({
+            id: crypto.randomUUID(),
+            type: btn.type,
+            text: btn.text,
+            url: btn.url,
+            phone: btn.phone_number
+          })) || [],
+          createdAt: template.created_at,
+          updatedAt: template.updated_at,
+          wabaStatuses
+        };
+      })
       
       setTemplates(convertedTemplates)
     } catch (error) {
@@ -71,29 +92,58 @@ const Templates = () => {
     if (!activeWorkspace) return
 
     try {
-      // Save to Supabase
+      // Save to message_templates with proper components_schema
+      const components_schema = [];
+      
+      // Add header component
+      if (tpl.headerType && tpl.headerType !== "NONE") {
+        components_schema.push({
+          type: 'HEADER',
+          format: tpl.headerType,
+          text: tpl.headerText
+        });
+      }
+      
+      // Add body component
+      if (tpl.body) {
+        components_schema.push({
+          type: 'BODY',
+          text: tpl.body
+        });
+      }
+      
+      // Add footer component
+      if (tpl.footer) {
+        components_schema.push({
+          type: 'FOOTER',
+          text: tpl.footer
+        });
+      }
+      
+      // Add buttons component
+      if (tpl.buttons && tpl.buttons.length > 0) {
+        components_schema.push({
+          type: 'BUTTONS',
+          buttons: tpl.buttons.map(btn => ({
+            type: btn.type,
+            text: btn.text,
+            url: btn.url,
+            phone_number: btn.phone
+          }))
+        });
+      }
+
       const { error } = await supabase
-        .from("templates")
+        .from("message_templates")
         .upsert({
           id: tpl.id,
           name: tpl.name,
           language: tpl.language,
           category: tpl.category,
-          components_schema: {
-            header: { type: tpl.headerType, text: tpl.headerText },
-            body: { text: tpl.body },
-            footer: tpl.footer ? { text: tpl.footer } : null,
-            buttons: tpl.buttons.map(btn => ({
-              id: btn.id,
-              type: btn.type,
-              text: btn.text,
-              url: btn.url || null,
-              phone: btn.phone || null
-            }))
-          } as any,
+          components_schema,
           workspace_id: activeWorkspace.id,
-          waba_ref: "", // Will be set properly later
-          status: "DRAFT"
+          waba_id: tpl.assignedNumberId || "",
+          status: "PENDING"
         })
 
       if (error) throw error
@@ -186,8 +236,12 @@ const Templates = () => {
 
           <TabsContent value="create" className="mt-4 space-y-6">
             <TemplateBuilder key={editing?.id ?? "new"} onSave={onSave} initial={editing} />
-            {editing && (
-              <WABAStatusMatrix template={editing} onSimulateSync={updateStatuses} />
+            {editing && activeWorkspace && (
+              <TemplateStatusDisplay 
+                templateId={editing.id} 
+                templateName={editing.name}
+                workspaceId={activeWorkspace.id}
+              />
             )}
           </TabsContent>
         </Tabs>
