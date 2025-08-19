@@ -1036,6 +1036,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: {
+        Args: { p_token: string }
+        Returns: string
+      }
+      create_invitation: {
+        Args: {
+          _email: string
+          _role?: Database["public"]["Enums"]["user_role"]
+          _workspace_id: string
+        }
+        Returns: string
+      }
       get_contacts_masked: {
         Args: { _workspace_id: string }
         Returns: {

@@ -12,6 +12,9 @@ import { useToast } from "@/hooks/use-toast"
 
 const Auth = () => {
   const [loading, setLoading] = useState(false)
+  const [checkingRegistration, setCheckingRegistration] = useState(true)
+  const [registrationAllowed, setRegistrationAllowed] = useState(false)
+  const [inviteToken, setInviteToken] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState("")
@@ -30,17 +33,45 @@ const Auth = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    inviteToken: "",
   })
 
-  // Check if user is already authenticated
+  // Check if user is already authenticated and check registration status
   useEffect(() => {
-    const checkUser = async () => {
+    const checkAuthAndRegistration = async () => {
+      // Check if user is authenticated
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         navigate("/")
+        return
       }
+
+      // Check URL for invite token
+      const urlParams = new URLSearchParams(window.location.search)
+      const token = urlParams.get('invite')
+      if (token) {
+        setInviteToken(token)
+        setSignupForm(prev => ({ ...prev, inviteToken: token }))
+        // If there's an invite token, allow registration
+        setRegistrationAllowed(true)
+      } else {
+        // Check if registration is allowed (no users exist yet)
+        try {
+          const { data, error } = await supabase.rpc('is_registration_allowed')
+          if (error) {
+            console.error('Error checking registration status:', error)
+            setRegistrationAllowed(false)
+          } else {
+            setRegistrationAllowed(data)
+          }
+        } catch (error) {
+          console.error('Error checking registration status:', error)
+          setRegistrationAllowed(false)
+        }
+      }
+      setCheckingRegistration(false)
     }
-    checkUser()
+    checkAuthAndRegistration()
   }, [navigate])
 
   // Cleanup auth state utility
@@ -123,6 +154,13 @@ const Auth = () => {
       return
     }
 
+    // Check if invite token is required but missing
+    if (!registrationAllowed && !signupForm.inviteToken.trim()) {
+      setError("Um token de convite é necessário para criar uma conta")
+      setLoading(false)
+      return
+    }
+
     try {
       // Clean up existing state
       cleanupAuthState()
@@ -152,6 +190,46 @@ const Auth = () => {
       }
 
       if (data.user) {
+        // If this is the first user, set up the workspace
+        if (registrationAllowed && !signupForm.inviteToken) {
+          try {
+            const { data: workspaceId, error: setupError } = await supabase
+              .rpc('setup_first_user', { user_id: data.user.id, workspace_name: 'Meu Workspace' })
+            
+            if (setupError) {
+              console.error('Error setting up first user:', setupError)
+            } else {
+              console.log('First user workspace created:', workspaceId)
+            }
+          } catch (setupError) {
+            console.error('Error in setup_first_user:', setupError)
+          }
+        }
+        
+        // If there's an invite token, try to accept it after email confirmation
+        if (signupForm.inviteToken && data.user.email_confirmed_at) {
+          try {
+            const { error: inviteError } = await supabase
+              .rpc('accept_invitation', { p_token: signupForm.inviteToken })
+            
+            if (inviteError) {
+              console.error('Error accepting invitation:', inviteError)
+              toast({
+                title: "Aviso",
+                description: "Conta criada, mas houve erro ao aceitar o convite. Entre em contato com o administrador.",
+                variant: "destructive",
+              })
+            } else {
+              toast({
+                title: "Convite aceito",
+                description: "Sua conta foi criada e você foi adicionado ao workspace!",
+              })
+            }
+          } catch (inviteError) {
+            console.error('Error accepting invitation:', inviteError)
+          }
+        }
+
         if (data.user.email_confirmed_at) {
           toast({
             title: "Conta criada",
@@ -170,6 +248,7 @@ const Auth = () => {
             email: "",
             password: "",
             confirmPassword: "",
+            inviteToken: "",
           })
         }
       }
@@ -181,25 +260,50 @@ const Auth = () => {
     }
   }
 
+  if (checkingRegistration) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Verificando status de registro...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">OmniFlow</CardTitle>
           <CardDescription>
-            Entre na sua conta ou crie uma nova
+            {inviteToken ? "Complete seu cadastro com o convite" : "Entre na sua conta ou crie uma nova"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="space-y-4">
+          <Tabs defaultValue={inviteToken ? "signup" : "login"} className="space-y-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Cadastrar</TabsTrigger>
+              <TabsTrigger value="signup" disabled={!registrationAllowed && !inviteToken}>
+                {registrationAllowed || inviteToken ? "Cadastrar" : "Cadastro Fechado"}
+              </TabsTrigger>
             </TabsList>
 
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {!registrationAllowed && !inviteToken && (
+              <Alert>
+                <AlertDescription>
+                  O registro público está fechado. Entre em contato com um administrador para receber um convite.
+                </AlertDescription>
               </Alert>
             )}
 
@@ -260,7 +364,40 @@ const Auth = () => {
             </TabsContent>
 
             <TabsContent value="signup" className="space-y-4">
+              {!registrationAllowed && !inviteToken ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    O registro público está fechado. Entre em contato com um administrador para receber um convite.
+                  </p>
+                </div>
+              ) : (
               <form onSubmit={handleSignup} className="space-y-4">
+                {inviteToken && (
+                  <div className="space-y-2">
+                    <Label htmlFor="invite-token">Token de Convite</Label>
+                    <Input
+                      id="invite-token"
+                      type="text"
+                      value={inviteToken}
+                      readOnly
+                      className="bg-muted"
+                    />
+                  </div>
+                )}
+                
+                {!registrationAllowed && !inviteToken && (
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-invite-token">Token de Convite</Label>
+                    <Input
+                      id="signup-invite-token"
+                      type="text"
+                      placeholder="Cole aqui seu token de convite"
+                      value={signupForm.inviteToken}
+                      onChange={(e) => setSignupForm({ ...signupForm, inviteToken: e.target.value })}
+                      required
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Nome Completo</Label>
                   <div className="relative">
@@ -355,6 +492,7 @@ const Auth = () => {
                   )}
                 </Button>
               </form>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
