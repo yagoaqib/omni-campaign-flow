@@ -463,6 +463,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "dispatch_jobs_audience_item_id_fkey"
+            columns: ["audience_item_id"]
+            isOneToOne: false
+            referencedRelation: "audience_items_secure"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "dispatch_jobs_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
@@ -951,7 +958,65 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      audience_items_secure: {
+        Row: {
+          audience_id: string | null
+          e164: string | null
+          id: string | null
+          opt_in: boolean | null
+          raw_msisdn: string | null
+          validation_status: string | null
+          wa_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audience_items_audience_id_fkey"
+            columns: ["audience_id"]
+            isOneToOne: false
+            referencedRelation: "audiences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts_secure: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          has_whatsapp: boolean | null
+          id: string | null
+          last_contact: string | null
+          name: string | null
+          phone: string | null
+          source: string | null
+          updated_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: never
+          has_whatsapp?: boolean | null
+          id?: string | null
+          last_contact?: string | null
+          name?: string | null
+          phone?: never
+          source?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: never
+          has_whatsapp?: boolean | null
+          id?: string | null
+          last_contact?: string | null
+          name?: string | null
+          phone?: never
+          source?: string | null
+          updated_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_workspace_role: {
