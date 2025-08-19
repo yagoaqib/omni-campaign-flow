@@ -8,104 +8,66 @@ import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
 import PoolEditor from "@/components/senders/PoolEditor"
 import { useState } from "react"
-import { Phone, Play, Pause, Settings, TrendingUp, AlertTriangle } from "lucide-react"
+import { Phone, Play, Pause, Settings, TrendingUp, AlertTriangle, RefreshCw } from "lucide-react"
+import { useRealPhoneNumbers } from "@/hooks/useRealPhoneNumbers"
+import { useRealTimeMetrics } from "@/hooks/useRealTimeMetrics"
+import { toast } from "sonner"
 
 const Senders = () => {
-  const senders = [
-    {
-      id: 1,
-      number: "+55 11 9999-0001",
-      displayName: "Atendimento Principal",
-      status: "healthy",
-      qualityRating: "Green",
-      tier: { used: 8200, limit: 10000 },
-      tps: { current: 15, max: 80 },
-      provider: "Infobip",
-      lastActivity: "2 min atrás",
-      todayStats: {
-        sent: 1247,
-        delivered: 1235,
-        failed: 12
-      }
-    },
-    {
-      id: 2,
-      number: "+55 11 9999-0002", 
-      displayName: "Marketing Campaigns",
-      status: "degraded",
-      qualityRating: "Yellow",
-      tier: { used: 3100, limit: 5000 },
-      tps: { current: 8, max: 50 },
-      provider: "Infobip",
-      lastActivity: "15 min atrás",
-      todayStats: {
-        sent: 892,
-        delivered: 867,
-        failed: 25
-      }
-    },
-    {
-      id: 3,
-      number: "+55 11 9999-0003",
-      displayName: "Suporte Técnico",
-      status: "healthy", 
-      qualityRating: "Green",
-      tier: { used: 1800, limit: 10000 },
-      tps: { current: 12, max: 80 },
-      provider: "Gupshup",
-      lastActivity: "5 min atrás",
-      todayStats: {
-        sent: 634,
-        delivered: 628,
-        failed: 6
-      }
-    },
-    {
-      id: 4,
-      number: "+55 11 9999-0004",
-      displayName: "E-commerce Alerts", 
-      status: "paused",
-      qualityRating: "Red",
-      tier: { used: 4500, limit: 5000 },
-      tps: { current: 0, max: 50 },
-      provider: "Infobip",
-      lastActivity: "2 horas atrás",
-      todayStats: {
-        sent: 0,
-        delivered: 0,
-        failed: 0
-      }
-    }
-  ]
+  const { phoneNumbers, loading, refreshNumbers, updatePhoneNumberStatus, updateMpsTarget } = useRealPhoneNumbers();
+  const { metrics } = useRealTimeMetrics();
+  const [openEditor, setOpenEditor] = useState(false);
+  const [autoBalance, setAutoBalance] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [openEditor, setOpenEditor] = useState(false)
-  const [autoBalance, setAutoBalance] = useState(true)
-  const [weights, setWeights] = useState<Record<number, number>>({ 1: 50, 2: 30, 3: 20, 4: 10 })
-  const [baseTps, setBaseTps] = useState<Record<number, number>>({ 1: 20, 2: 15, 3: 18, 4: 10 })
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshNumbers();
+    setRefreshing(false);
+  };
+
+  const handleStatusToggle = async (phoneNumberId: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+      await updatePhoneNumberStatus(phoneNumberId, newStatus);
+      toast.success(`Número ${newStatus === 'ACTIVE' ? 'reativado' : 'pausado'} com sucesso`);
+    } catch (error) {
+      toast.error('Erro ao alterar status do número');
+    }
+  };
+
+  const handleMpsUpdate = async (phoneNumberId: string, newMps: number) => {
+    try {
+      await updateMpsTarget(phoneNumberId, newMps);
+      toast.success('MPS atualizado com sucesso');
+    } catch (error) {
+      toast.error('Erro ao atualizar MPS');
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "healthy": return "bg-success-soft text-success"
-      case "degraded": return "bg-warning-soft text-warning"
-      case "paused": return "bg-destructive-soft text-destructive"
+      case "ACTIVE": return "bg-success-soft text-success"
+      case "PAUSED": return "bg-warning-soft text-warning"
+      case "BLOCKED": return "bg-destructive-soft text-destructive"
       default: return "bg-muted text-muted-foreground"
     }
   }
 
   const getQualityColor = (quality: string) => {
     switch (quality) {
-      case "Green": return "bg-success-soft text-success"
-      case "Yellow": return "bg-warning-soft text-warning"
-      case "Red": return "bg-destructive-soft text-destructive"
+      case "HIGH": return "bg-success-soft text-success"
+      case "MEDIUM": return "bg-warning-soft text-warning"
+      case "LOW": return "bg-destructive-soft text-destructive"
       default: return "bg-muted text-muted-foreground"
     }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "healthy": return <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-      case "degraded": return <AlertTriangle className="w-4 h-4 text-warning" />
-      case "paused": return <Pause className="w-4 h-4 text-destructive" />
+      case "ACTIVE": return <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+      case "PAUSED": return <Pause className="w-4 h-4 text-warning" />
+      case "BLOCKED": return <AlertTriangle className="w-4 h-4 text-destructive" />
       default: return <div className="w-2 h-2 bg-muted rounded-full"></div>
     }
   }
@@ -121,13 +83,22 @@ const Senders = () => {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-sm">
-              <div className="font-medium">Pool Marketing BR (3 números)</div>
+              <div className="font-medium">Pool Marketing BR ({phoneNumbers.length} números)</div>
               <div className="text-muted-foreground">Política: WRR + Auto-Throttle</div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Balanceamento automático</span>
               <Switch checked={autoBalance} onCheckedChange={(v) => setAutoBalance(!!v)} />
             </div>
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh} 
+              disabled={refreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
             <Button variant="outline" onClick={() => setOpenEditor(true)}>Editar Pool</Button>
           </div>
         </div>
@@ -139,8 +110,8 @@ const Senders = () => {
               <div className="flex items-center gap-3">
                 <Phone className="w-8 h-8 text-primary" />
                 <div>
-                  <div className="text-2xl font-bold">4</div>
-                  <div className="text-sm text-muted-foreground">Números Ativos</div>
+                  <div className="text-2xl font-bold">{phoneNumbers.length}</div>
+                  <div className="text-sm text-muted-foreground">Números Configurados</div>
                 </div>
               </div>
             </CardContent>
@@ -152,8 +123,8 @@ const Senders = () => {
                   <div className="w-4 h-4 bg-success rounded-full"></div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">2</div>
-                  <div className="text-sm text-muted-foreground">Qualidade Verde</div>
+                  <div className="text-2xl font-bold">{metrics.numbers.high_quality}</div>
+                  <div className="text-sm text-muted-foreground">Qualidade Alta</div>
                 </div>
               </div>
             </CardContent>
@@ -165,8 +136,8 @@ const Senders = () => {
                   <div className="w-4 h-4 bg-warning rounded-full"></div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">1</div>
-                  <div className="text-sm text-muted-foreground">Qualidade Amarela</div>
+                  <div className="text-2xl font-bold">{metrics.numbers.medium_quality}</div>
+                  <div className="text-sm text-muted-foreground">Qualidade Média</div>
                 </div>
               </div>
             </CardContent>
@@ -176,7 +147,9 @@ const Senders = () => {
               <div className="flex items-center gap-3">
                 <TrendingUp className="w-8 h-8 text-success" />
                 <div>
-                  <div className="text-2xl font-bold">97.8%</div>
+                  <div className="text-2xl font-bold">
+                    {metrics.messages.deliveryRate.toFixed(1)}%
+                  </div>
                   <div className="text-sm text-muted-foreground">Taxa de Entrega Média</div>
                 </div>
               </div>
@@ -184,116 +157,120 @@ const Senders = () => {
           </Card>
         </div>
 
-        {/* Senders Grid */}
+        {/* Phone Numbers Grid */}
         <div className="grid gap-6">
-          {senders.map((sender) => (
-            <Card key={sender.id} className="overflow-hidden">
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      {getStatusIcon(sender.status)}
-                      <CardTitle className="text-lg font-mono">{sender.number}</CardTitle>
-                      <Badge variant="outline">{sender.provider}</Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground">{sender.displayName}</div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={getStatusColor(sender.status)}>
-                        {sender.status}
-                      </Badge>
-                      <Badge className={getQualityColor(sender.qualityRating)}>
-                        Quality: {sender.qualityRating}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="icon">
-                      <Settings className="w-4 h-4" />
-                    </Button>
-                    {sender.status === "paused" ? (
-                      <Button size="sm" className="gap-1">
-                        <Play className="w-3 h-3" />
-                        Reativar
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" className="gap-1">
-                        <Pause className="w-3 h-3" />
-                        Pausar
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Tier Usage */}
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Tier</span>
-                    <span>{sender.tier.used.toLocaleString()} / {sender.tier.limit.toLocaleString()}</span>
-                  </div>
-                  <Progress 
-                    value={(sender.tier.used / sender.tier.limit) * 100} 
-                    className="h-2"
-                  />
-                  <div className="text-xs text-muted-foreground">
-                    {Math.round((sender.tier.used / sender.tier.limit) * 100)}% utilizado
-                  </div>
-                </div>
-
-                {/* Weight & TPS Controls */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Peso no rodízio</span>
-                      <span className="text-muted-foreground">{weights[sender.id] ?? 0}%</span>
-                    </div>
-                    <Slider value={[weights[sender.id] ?? 0]} max={100} step={1} onValueChange={(v) => setWeights((w) => ({ ...w, [sender.id]: v[0] }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>TPS base</span>
-                      <span className="text-muted-foreground">{baseTps[sender.id] ?? 0}</span>
-                    </div>
-                    <Input type="number" value={baseTps[sender.id] ?? 0} onChange={(e) => setBaseTps((t) => ({ ...t, [sender.id]: Number(e.target.value) }))} />
-                  </div>
-                </div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-5 gap-4 pt-2">
-                  <div className="text-center">
-                    <div className="text-lg font-bold">{sender.tps.current}</div>
-                    <div className="text-xs text-muted-foreground">TPS Atual</div>
-                    <div className="text-xs text-muted-foreground">max: {sender.tps.max}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold">{sender.todayStats.sent}</div>
-                    <div className="text-xs text-muted-foreground">Enviadas Hoje</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-success">{sender.todayStats.delivered}</div>
-                    <div className="text-xs text-muted-foreground">Entregues</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-destructive">{sender.todayStats.failed}</div>
-                    <div className="text-xs text-muted-foreground">Falhas</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-primary">
-                      {sender.todayStats.sent > 0 
-                        ? Math.round((sender.todayStats.delivered / sender.todayStats.sent) * 100) 
-                        : 0}%
-                    </div>
-                    <div className="text-xs text-muted-foreground">Taxa de Entrega</div>
-                  </div>
-                </div>
-
-                {/* Last Activity */}
-                <div className="text-xs text-muted-foreground border-t pt-3">
-                  Última atividade: {sender.lastActivity}
-                </div>
+          {loading ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Carregando números...</p>
               </CardContent>
             </Card>
-          ))}
+          ) : phoneNumbers.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Phone className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">Nenhum número configurado</p>
+                <p className="text-sm text-muted-foreground">Configure números na aba Admin para começar</p>
+              </CardContent>
+            </Card>
+          ) : (
+            phoneNumbers.map((phoneNumber) => (
+              <Card key={phoneNumber.id} className="overflow-hidden">
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        {getStatusIcon(phoneNumber.status)}
+                        <CardTitle className="text-lg font-mono">{phoneNumber.display_number}</CardTitle>
+                        <Badge variant="outline">{phoneNumber.waba?.name || 'Sem WABA'}</Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">ID: {phoneNumber.phone_number_id}</div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(phoneNumber.status)}>
+                          {phoneNumber.status}
+                        </Badge>
+                        <Badge className={getQualityColor(phoneNumber.quality_rating)}>
+                          Qualidade: {phoneNumber.quality_rating}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon">
+                        <Settings className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant={phoneNumber.status === "PAUSED" ? "default" : "outline"}
+                        className="gap-1"
+                        onClick={() => handleStatusToggle(phoneNumber.id, phoneNumber.status)}
+                      >
+                        {phoneNumber.status === "PAUSED" ? (
+                          <>
+                            <Play className="w-3 h-3" />
+                            Reativar
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="w-3 h-3" />
+                            Pausar
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* MPS Target */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">MPS Target</span>
+                      <span>{phoneNumber.mps_target}/min</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input 
+                        type="number" 
+                        value={phoneNumber.mps_target} 
+                        onChange={(e) => handleMpsUpdate(phoneNumber.id, Number(e.target.value))}
+                        min={1}
+                        max={100}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-4 gap-4 pt-2">
+                    <div className="text-center">
+                      <div className="text-lg font-bold">{phoneNumber.todayStats.sent}</div>
+                      <div className="text-xs text-muted-foreground">Enviadas Hoje</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-success">{phoneNumber.todayStats.delivered}</div>
+                      <div className="text-xs text-muted-foreground">Entregues</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-destructive">{phoneNumber.todayStats.failed}</div>
+                      <div className="text-xs text-muted-foreground">Falhas</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-primary">
+                        {phoneNumber.todayStats.delivery_rate.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">Taxa de Entrega</div>
+                    </div>
+                  </div>
+
+                  {/* Last Activity */}
+                  <div className="text-xs text-muted-foreground border-t pt-3">
+                    Criado em: {new Date(phoneNumber.created_at).toLocaleDateString('pt-BR')}
+                    {phoneNumber.last_health_at && (
+                      <span> • Última verificação: {new Date(phoneNumber.last_health_at).toLocaleDateString('pt-BR')}</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </div>
       <PoolEditor open={openEditor} onOpenChange={setOpenEditor} />

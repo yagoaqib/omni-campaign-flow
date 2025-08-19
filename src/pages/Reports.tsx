@@ -13,12 +13,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SingleLineChart } from "@/components/dashboard/SingleLineChart"
-import { Download } from "lucide-react"
+import { Download, RefreshCw } from "lucide-react"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
+import { useReportsData } from "@/hooks/useReportsData"
 
 const Reports = () => {
   const reportRef = useRef<HTMLDivElement | null>(null)
+  const { campaigns, hourlyStats, loading, refreshData } = useReportsData();
 
   // SEO basics for this page
   useEffect(() => {
@@ -42,58 +44,29 @@ const Reports = () => {
     canonical.href = `${window.location.origin}/reports`
   }, [])
 
-  // Mock chart data (exemplo)
-  const chartData = useMemo(
-    () => [
-      { time: "08:00", delivered: 120, read: 96 },
-      { time: "09:00", delivered: 180, read: 150 },
-      { time: "10:00", delivered: 220, read: 176 },
-      { time: "11:00", delivered: 260, read: 208 },
-      { time: "12:00", delivered: 200, read: 160 },
-      { time: "13:00", delivered: 240, read: 192 },
-      { time: "14:00", delivered: 280, read: 224 },
-      { time: "15:00", delivered: 300, read: 240 },
-      { time: "16:00", delivered: 260, read: 210 },
-      { time: "17:00", delivered: 230, read: 190 },
-      { time: "18:00", delivered: 210, read: 175 },
-      { time: "19:00", delivered: 170, read: 140 },
-    ],
-    []
-  )
+  // Use real chart data from hourly stats
+  const chartData = useMemo(() => {
+    return hourlyStats.map(stat => ({
+      time: stat.hour,
+      delivered: stat.delivered,
+      read: stat.read
+    }));
+  }, [hourlyStats]);
 
-  type Row = {
-    campaign: string
-    sent: number
-    delivered: number
-    read: number
-    replies: number
-    cost: number // em BRL
-    date: string
-  }
-
-  const rows: Row[] = useMemo(
-    () => [
-      { campaign: "Lançamento Q3", sent: 12000, delivered: 11200, read: 8900, replies: 860, cost: 1580.4, date: "2025-08-08" },
-      { campaign: "Retenção VIP", sent: 5400, delivered: 5100, read: 4200, replies: 510, cost: 712.1, date: "2025-08-08" },
-      { campaign: "Cross-sell", sent: 7600, delivered: 7000, read: 5520, replies: 430, cost: 998.7, date: "2025-08-07" },
-      { campaign: "Reativação", sent: 3200, delivered: 2800, read: 2100, replies: 160, cost: 362.3, date: "2025-08-07" },
-    ],
-    []
-  )
-
+  // Calculate totals from real campaign data
   const totals = useMemo(() => {
-    return rows.reduce(
-      (acc, r) => {
-        acc.sent += r.sent
-        acc.delivered += r.delivered
-        acc.read += r.read
-        acc.replies += r.replies
-        acc.cost += r.cost
-        return acc
+    return campaigns.reduce(
+      (acc, campaign) => {
+        acc.sent += campaign.messages_sent;
+        acc.delivered += campaign.messages_delivered;
+        acc.read += campaign.messages_read;
+        acc.replies += 0; // No replies tracking yet
+        acc.cost += campaign.estimated_cost;
+        return acc;
       },
       { sent: 0, delivered: 0, read: 0, replies: 0, cost: 0 }
-    )
-  }, [rows])
+    );
+  }, [campaigns]);
 
   const currency = useMemo(
     () => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }),
@@ -134,8 +107,17 @@ const Reports = () => {
             <p className="text-muted-foreground">Análise detalhada de performance e custos</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={handleExportPDF} aria-label="Exportar relatório em PDF">
-              <Download className="mr-2 h-4 w-4" /> Exportar PDF
+            <Button 
+              variant="outline" 
+              onClick={refreshData} 
+              disabled={loading}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+            <Button onClick={handleExportPDF} aria-label="Exportar relatório em PDF" className="gap-2">
+              <Download className="w-4 h-4" /> Exportar PDF
             </Button>
           </div>
         </header>
@@ -157,7 +139,9 @@ const Reports = () => {
   </CardHeader>
   <CardContent>
     <Table>
-      <TableCaption>Dados fictícios para demonstração.</TableCaption>
+      <TableCaption>
+        {campaigns.length === 0 ? "Nenhuma campanha encontrada." : "Dados reais de campanhas ativas."}
+      </TableCaption>
       <TableHeader>
         <TableRow>
           <TableHead>Campanha</TableHead>
@@ -171,21 +155,29 @@ const Reports = () => {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((r) => {
-          const ctr = r.delivered ? r.replies / r.delivered : 0
-          return (
-            <TableRow key={r.campaign}>
-              <TableCell className="font-medium">{r.campaign}</TableCell>
-              <TableCell className="text-right">{r.sent.toLocaleString("pt-BR")}</TableCell>
-              <TableCell className="text-right">{r.delivered.toLocaleString("pt-BR")}</TableCell>
-              <TableCell className="text-right">{r.read.toLocaleString("pt-BR")}</TableCell>
-              <TableCell className="text-right">{r.replies.toLocaleString("pt-BR")}</TableCell>
-              <TableCell className="text-right">{percent.format(ctr)}</TableCell>
-              <TableCell className="text-right">{currency.format(r.cost)}</TableCell>
-              <TableCell className="text-right">{new Date(r.date).toLocaleDateString("pt-BR")}</TableCell>
-            </TableRow>
-          )
-        })}
+        {campaigns.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+              {loading ? "Carregando campanhas..." : "Nenhuma campanha encontrada"}
+            </TableCell>
+          </TableRow>
+        ) : (
+          campaigns.map((campaign) => {
+            const ctr = campaign.messages_delivered > 0 ? (campaign.messages_read / campaign.messages_delivered) : 0;
+            return (
+              <TableRow key={campaign.id}>
+                <TableCell className="font-medium">{campaign.name}</TableCell>
+                <TableCell className="text-right">{campaign.messages_sent.toLocaleString("pt-BR")}</TableCell>
+                <TableCell className="text-right">{campaign.messages_delivered.toLocaleString("pt-BR")}</TableCell>
+                <TableCell className="text-right">{campaign.messages_read.toLocaleString("pt-BR")}</TableCell>
+                <TableCell className="text-right">0</TableCell>
+                <TableCell className="text-right">{percent.format(ctr)}</TableCell>
+                <TableCell className="text-right">{currency.format(campaign.estimated_cost)}</TableCell>
+                <TableCell className="text-right">{new Date(campaign.created_at).toLocaleDateString("pt-BR")}</TableCell>
+              </TableRow>
+            );
+          })
+        )}
       </TableBody>
       <TableFooter>
         <TableRow>

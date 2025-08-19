@@ -2,34 +2,42 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { KpiTile } from "@/components/dashboard/KpiTile";
 import { FunnelCompact } from "@/components/dashboard/FunnelCompact";
 import { SingleLineChart } from "@/components/dashboard/SingleLineChart";
-
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Cloud, Smartphone } from "lucide-react";
+import { Calendar, Cloud, Smartphone, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-// Sample data
-const funnelData = {
-  sent: 24500,
-  delivered: 23098,
-  read: 19234,
-  clicked: 1847
-};
-
-const chartData = [
-  { time: "00:00", delivered: 1200, read: 950 },
-  { time: "04:00", delivered: 800, read: 640 },
-  { time: "08:00", delivered: 2400, read: 1920 },
-  { time: "12:00", delivered: 3200, read: 2560 },
-  { time: "16:00", delivered: 2800, read: 2240 },
-  { time: "20:00", delivered: 1600, read: 1280 },
-];
+import { useRealTimeMetrics } from "@/hooks/useRealTimeMetrics";
+import { useReportsData } from "@/hooks/useReportsData";
+import { useState } from "react";
 
 
 function Index() {
   const navigate = useNavigate();
+  const { metrics, loading: metricsLoading, refreshMetrics } = useRealTimeMetrics();
+  const { hourlyStats, loading: reportsLoading } = useReportsData();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshMetrics();
+    setRefreshing(false);
+  };
+
+  // Prepare funnel data from real metrics
+  const funnelData = {
+    sent: metrics.messages.sent,
+    delivered: metrics.messages.delivered,
+    read: metrics.messages.read,
+    clicked: 0 // No click tracking implemented yet
+  };
+
+  // Use real hourly stats or empty array
+  const chartData = hourlyStats.length > 0 ? hourlyStats.map(stat => ({
+    time: stat.hour,
+    delivered: stat.delivered,
+    read: stat.read
+  })) : [];
 
   return (
     <AppLayout>
@@ -44,6 +52,17 @@ function Index() {
           </div>
           
           <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+            
             <Select defaultValue="24h">
               <SelectTrigger className="w-32">
                 <SelectValue />
@@ -58,7 +77,9 @@ function Index() {
             <div className="flex items-center gap-2">
               <Cloud className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Meta Cloud</span>
-              <Badge variant="outline">WABA-01</Badge>
+              <Badge variant="outline">
+                {metrics.numbers.active > 0 ? `${metrics.numbers.active} ativos` : 'Sem números'}
+              </Badge>
             </div>
           </div>
         </div>
@@ -67,34 +88,54 @@ function Index() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiTile
             title="Enviadas"
-            value="24.5K"
-            delta={{ value: "+12.5%", trend: "up" }}
+            value={metricsLoading ? "..." : metrics.messages.sent.toLocaleString()}
+            delta={{ value: metrics.messages.sent > 0 ? "Dados reais" : "Sem dados", trend: "neutral" }}
             onClick={() => navigate("/reports")}
           />
           <KpiTile
             title="Entregues"
-            value="23.1K"
-            delta={{ value: "+8.2%", trend: "up" }}
+            value={metricsLoading ? "..." : metrics.messages.delivered.toLocaleString()}
+            delta={{ 
+              value: `${metrics.messages.deliveryRate.toFixed(1)}%`, 
+              trend: metrics.messages.deliveryRate >= 95 ? "up" : metrics.messages.deliveryRate >= 90 ? "neutral" : "down" 
+            }}
             onClick={() => navigate("/reports")}
           />
           <KpiTile
             title="Lidas"
-            value="19.2K"
-            delta={{ value: "-1.3%", trend: "down" }}
+            value={metricsLoading ? "..." : metrics.messages.read.toLocaleString()}
+            delta={{ 
+              value: `${metrics.messages.readRate.toFixed(1)}%`, 
+              trend: metrics.messages.readRate >= 70 ? "up" : metrics.messages.readRate >= 50 ? "neutral" : "down"
+            }}
             onClick={() => navigate("/reports")}
           />
           <KpiTile
-            title="CTR"
-            value="3.4%"
-            delta={{ value: "+0.8%", trend: "up" }}
-            onClick={() => navigate("/reports")}
+            title="Números Ativos"
+            value={metricsLoading ? "..." : metrics.numbers.active.toString()}
+            delta={{ 
+              value: `${metrics.numbers.high_quality} qualidade alta`, 
+              trend: metrics.numbers.high_quality > 0 ? "up" : "down" 
+            }}
+            onClick={() => navigate("/senders")}
           />
         </div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <FunnelCompact data={funnelData} />
-          <SingleLineChart data={chartData} />
+          {metricsLoading || reportsLoading ? (
+            <div className="lg:col-span-2 flex items-center justify-center py-12">
+              <div className="text-center">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Carregando métricas reais...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <FunnelCompact data={funnelData} />
+              <SingleLineChart data={chartData} />
+            </>
+          )}
         </div>
 
       </div>
