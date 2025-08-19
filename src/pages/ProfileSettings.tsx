@@ -46,6 +46,30 @@ const ProfileSettings = () => {
   }, [profile])
 
   const handleSave = async () => {
+    if (!profile) {
+      console.error("Profile not loaded, attempting to reload...")
+      if (activeWorkspace?.id) {
+        await loadProfile(activeWorkspace.id)
+      } else {
+        toast({
+          title: "Erro",
+          description: "Workspace não encontrado. Recarregue a página.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    if (!profile) {
+      toast({
+        title: "Erro", 
+        description: "Perfil não carregado. Recarregue a página e tente novamente.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    console.log("Attempting to save profile:", { profile, formData })
     const success = await updateProfile(formData)
     
     if (success) {
@@ -89,6 +113,11 @@ const ProfileSettings = () => {
     setUploading(true)
     try {
       const avatarUrl = await processAndUploadAvatar(file, activeWorkspace.id, removeBackground)
+      
+      // Ensure profile is loaded before updating avatar
+      if (!profile && activeWorkspace?.id) {
+        await loadProfile(activeWorkspace.id)
+      }
       
       const success = await updateProfile({ avatar_url: avatarUrl })
       

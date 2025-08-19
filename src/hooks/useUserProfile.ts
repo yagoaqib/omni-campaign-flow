@@ -9,8 +9,12 @@ export function useUserProfile() {
   const [loading, setLoading] = useState(false);
 
   const loadProfile = useCallback(async (workspaceId: string) => {
-    if (!workspaceId) return;
+    if (!workspaceId) {
+      console.error("No workspaceId provided to loadProfile");
+      return;
+    }
     
+    console.log("Loading profile for workspace:", workspaceId);
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -20,11 +24,16 @@ export function useUserProfile() {
         .limit(1)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error loading profile:", error);
+        throw error;
+      }
 
       if (data) {
+        console.log("Profile loaded successfully:", data);
         setProfile(data);
       } else {
+        console.log("No profile found, creating default profile");
         // Create default profile if none exists
         const { data: newProfile, error: createError } = await supabase
           .from("user_profiles")
@@ -35,7 +44,11 @@ export function useUserProfile() {
           .select()
           .single();
 
-        if (createError) throw createError;
+        if (createError) {
+          console.error("Error creating default profile:", createError);
+          throw createError;
+        }
+        console.log("Default profile created:", newProfile);
         setProfile(newProfile);
       }
     } catch (error) {
