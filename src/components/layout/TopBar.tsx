@@ -15,6 +15,8 @@ import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { useWorkspace } from "@/hooks/useWorkspace"
 import { useNotifications } from "@/hooks/useNotifications"
+import { useRealTimeMetrics } from "@/hooks/useRealTimeMetrics"
+import { useBalance } from "@/hooks/useBalance"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
@@ -28,6 +30,8 @@ const mockWorkspaces = [
 export function TopBar() {
   const { activeWorkspace, workspaces, loadWorkspaces, switchWorkspace } = useWorkspace();
   const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { metrics, loading: metricsLoading } = useRealTimeMetrics();
+  const { balance, loading: balanceLoading } = useBalance();
   
   useEffect(() => {
     loadWorkspaces();
@@ -92,18 +96,28 @@ export function TopBar() {
         {/* Health Indicators */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Fila:</span>
-            <Badge variant="secondary">1,234</Badge>
+            <span className="text-muted-foreground">Campanhas:</span>
+            <Badge variant="secondary">
+              {metricsLoading ? "..." : metrics.campaigns.active}
+            </Badge>
           </div>
 
           <div className="flex items-center gap-2 text-sm">
             <div className="w-2 h-2 bg-success rounded-full"></div>
-            <span className="text-muted-foreground">Webhooks</span>
+            <span className="text-muted-foreground">Entregas:</span>
+            <Badge variant="secondary">
+              {metricsLoading ? "..." : `${metrics.messages.deliveryRate.toFixed(1)}%`}
+            </Badge>
           </div>
 
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Saldo:</span>
-            <span className="font-medium">R$ 2.847,50</span>
+            <span className="text-muted-foreground">Gasto total:</span>
+            <span className="font-medium">
+              {balanceLoading ? "..." : new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+              }).format(balance.total_spent)}
+            </span>
           </div>
         </div>
 
