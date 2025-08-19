@@ -125,16 +125,33 @@ export function useWorkspace() {
 
   const createWorkspace = useCallback(async (name: string) => {
     try {
-      const { data, error } = await supabase
+      // Check if this is the first user (no workspaces exist)
+      const { data: existingWorkspaces } = await supabase
         .from("workspaces")
-        .insert({ name })
-        .select()
-        .single();
+        .select("id")
+        .limit(1);
 
-      if (error) throw error;
-      
-      await loadWorkspaces();
-      return data;
+      if (!existingWorkspaces || existingWorkspaces.length === 0) {
+        // First user - use setup function
+        const { data: workspaceId, error } = await supabase.rpc('setup_first_user_workspace');
+        
+        if (error) throw error;
+        
+        await loadWorkspaces();
+        return { id: workspaceId, name: 'Meu Workspace' };
+      } else {
+        // Normal workspace creation
+        const { data, error } = await supabase
+          .from("workspaces")
+          .insert({ name })
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        await loadWorkspaces();
+        return data;
+      }
     } catch (error) {
       console.error("Failed to create workspace:", error);
       return null;

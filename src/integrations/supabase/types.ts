@@ -1103,6 +1103,10 @@ export type Database = {
         Args: { user_id: string; workspace_name?: string }
         Returns: string
       }
+      setup_first_user_workspace: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       user_role: "owner" | "admin" | "member"
