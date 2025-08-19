@@ -24,10 +24,13 @@ interface Invitation {
   id: string
   email: string
   role: 'owner' | 'admin' | 'member'
-  status: string // Changed from union type to string for flexibility
-  token: string
+  status: string
+  token_hash: string
   expires_at: string
   created_at: string
+  accepted_at?: string
+  invited_by: string
+  workspace_id: string
 }
 
 interface Member {
@@ -179,22 +182,6 @@ export function UserManagement() {
     }
   }
 
-  const copyInviteLink = async (token: string) => {
-    const inviteUrl = `${window.location.origin}/auth?invite=${token}`
-    try {
-      await navigator.clipboard.writeText(inviteUrl)
-      toast({
-        title: "Link copiado",
-        description: "O link do convite foi copiado para a área de transferência.",
-      })
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível copiar o link.",
-        variant: "destructive",
-      })
-    }
-  }
 
   const deleteInvitation = async (invitationId: string) => {
     try {
@@ -377,15 +364,9 @@ export function UserManagement() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyInviteLink(invitation.token)}
-                    className="gap-1"
-                  >
-                    <Copy className="w-3 h-3" />
-                    Copiar Link
-                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    Token criado - envie o link gerado
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"

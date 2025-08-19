@@ -90,6 +90,48 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          record_id: string | null
+          table_name: string | null
+          user_agent: string | null
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       campaign_numbers: {
         Row: {
           campaign_id: string
@@ -495,7 +537,6 @@ export type Database = {
           invited_by: string
           role: Database["public"]["Enums"]["user_role"]
           status: string
-          token: string
           token_hash: string | null
           workspace_id: string
         }
@@ -508,7 +549,6 @@ export type Database = {
           invited_by: string
           role?: Database["public"]["Enums"]["user_role"]
           status?: string
-          token: string
           token_hash?: string | null
           workspace_id: string
         }
@@ -521,7 +561,6 @@ export type Database = {
           invited_by?: string
           role?: Database["public"]["Enums"]["user_role"]
           status?: string
-          token?: string
           token_hash?: string | null
           workspace_id?: string
         }
@@ -1060,6 +1099,18 @@ export type Database = {
         }
         Returns: string
       }
+      create_waba_secure: {
+        Args: {
+          p_access_token?: string
+          p_app_secret?: string
+          p_meta_business_id: string
+          p_name: string
+          p_verify_token?: string
+          p_waba_id: string
+          p_workspace_id: string
+        }
+        Returns: boolean
+      }
       create_workspace_for_current_user: {
         Args: { p_name: string }
         Returns: string
@@ -1103,6 +1154,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      log_audit_event: {
+        Args: {
+          p_action: string
+          p_new_values?: Json
+          p_old_values?: Json
+          p_record_id?: string
+          p_table_name?: string
+          p_workspace_id: string
+        }
+        Returns: undefined
+      }
       setup_first_user: {
         Args: { user_id: string; workspace_name?: string }
         Returns: string
@@ -1110,6 +1172,18 @@ export type Database = {
       setup_first_user_workspace: {
         Args: { p_name?: string }
         Returns: string
+      }
+      update_waba_credentials: {
+        Args: {
+          p_access_token?: string
+          p_app_secret?: string
+          p_meta_business_id: string
+          p_name: string
+          p_verify_token?: string
+          p_waba_id: string
+          p_waba_id_text: string
+        }
+        Returns: boolean
       }
     }
     Enums: {

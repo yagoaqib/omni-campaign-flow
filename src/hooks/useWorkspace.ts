@@ -142,7 +142,7 @@ export function useWorkspace() {
       } else {
         // Normal workspace creation - via secure RPC that also inserts membership
         const { data: workspaceId, error: rpcError } = await supabase
-          .rpc('create_workspace_for_current_user' as any, { p_name: name });
+          .rpc('create_workspace_for_current_user', { p_name: name });
 
         if (rpcError) throw rpcError;
 
