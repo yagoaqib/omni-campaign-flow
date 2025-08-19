@@ -1060,6 +1060,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_workspace_for_current_user: {
+        Args: { p_name: string }
+        Returns: string
+      }
       get_contacts_masked: {
         Args: { _workspace_id: string }
         Returns: {
@@ -1104,7 +1108,7 @@ export type Database = {
         Returns: string
       }
       setup_first_user_workspace: {
-        Args: Record<PropertyKey, never> | { p_name?: string }
+        Args: { p_name?: string }
         Returns: string
       }
     }

@@ -140,28 +140,14 @@ export function useWorkspace() {
         await loadWorkspaces();
         return { id: workspaceId, name };
       } else {
-        // Normal workspace creation - create workspace and membership
-        const { data: workspaceData, error: workspaceError } = await supabase
-          .from("workspaces")
-          .insert({ name })
-          .select()
-          .single();
+        // Normal workspace creation - via secure RPC that also inserts membership
+        const { data: workspaceId, error: rpcError } = await supabase
+          .rpc('create_workspace_for_current_user' as any, { p_name: name });
 
-        if (workspaceError) throw workspaceError;
+        if (rpcError) throw rpcError;
 
-        // Add current user as owner of the workspace
-        const { error: memberError } = await supabase
-          .from("members")
-          .insert({
-            user_id: (await supabase.auth.getUser()).data.user?.id,
-            workspace_id: workspaceData.id,
-            role: 'owner'
-          });
-
-        if (memberError) throw memberError;
-        
         await loadWorkspaces();
-        return workspaceData;
+        return { id: workspaceId, name } as any;
       }
     } catch (error) {
       console.error("Failed to create workspace:", error);
