@@ -1,19 +1,121 @@
 import { AppLayout } from "@/components/layout/AppLayout"
 import ClientCredentialsForm from "@/components/admin/ClientCredentialsForm"
 import { useWorkspace } from "@/hooks/useWorkspace"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/hooks/use-toast"
+import { Pencil, Check, X } from "lucide-react"
 
 const Admin = () => {
-  const { activeWorkspace, wabas, loadWabas, updateWaba, createWaba } = useWorkspace();
+  const { activeWorkspace, wabas, workspaces, loadWorkspaces, updateWaba, createWaba } = useWorkspace();
+  const [editingWorkspace, setEditingWorkspace] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const { toast } = useToast();
 
-  // WABAs are automatically loaded when workspace changes in the hook
+  const handleEditWorkspace = (workspaceId: string, currentName: string) => {
+    setEditingWorkspace(workspaceId);
+    setEditName(currentName);
+  };
+
+  const handleSaveWorkspace = async (workspaceId: string) => {
+    try {
+      const { error } = await supabase
+        .from('workspaces')
+        .update({ name: editName })
+        .eq('id', workspaceId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Workspace atualizado",
+        description: "Nome do workspace foi alterado com sucesso.",
+      });
+
+      setEditingWorkspace(null);
+      loadWorkspaces();
+    } catch (error) {
+      console.error('Error updating workspace:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o workspace.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingWorkspace(null);
+    setEditName("");
+  };
 
   return (
     <AppLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Administração</h1>
-          <p className="text-muted-foreground">Configurações de credenciais Meta WhatsApp Cloud</p>
+          <p className="text-muted-foreground">Configurações de workspaces e credenciais Meta WhatsApp Cloud</p>
         </div>
+        
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle>Workspaces</CardTitle>
+              <CardDescription>
+                Gerencie os nomes dos seus workspaces
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {workspaces.map((workspace) => (
+                <div key={workspace.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                  {editingWorkspace === workspace.id ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="flex-1"
+                        placeholder="Nome do workspace"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveWorkspace(workspace.id)}
+                        disabled={!editName.trim()}
+                      >
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCancelEdit}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between flex-1">
+                      <span className="font-medium">{workspace.name}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditWorkspace(workspace.id, workspace.name)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {workspaces.length === 0 && (
+                <p className="text-muted-foreground text-center py-4">
+                  Nenhum workspace encontrado
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </section>
+        
         <section>
           <ClientCredentialsForm 
             workspaceName={activeWorkspace?.name || "Cliente"}
