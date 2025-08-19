@@ -47,7 +47,12 @@ export function useUserProfile() {
   }, []);
 
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
-    if (!profile) return false;
+    if (!profile) {
+      console.error("No profile loaded");
+      return false;
+    }
+
+    console.log("Updating profile:", { profileId: profile.id, updates });
 
     try {
       const { data, error } = await supabase
@@ -57,8 +62,12 @@ export function useUserProfile() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase update error:", error);
+        throw error;
+      }
 
+      console.log("Profile updated successfully:", data);
       setProfile(data);
       return true;
     } catch (error) {
