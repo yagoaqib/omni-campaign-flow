@@ -754,6 +754,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "phone_numbers_waba_ref_fkey"
+            columns: ["waba_ref"]
+            isOneToOne: false
+            referencedRelation: "wabas_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "phone_numbers_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -894,6 +901,13 @@ export type Database = {
             columns: ["waba_ref"]
             isOneToOne: false
             referencedRelation: "wabas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "templates_waba_ref_fkey"
+            columns: ["waba_ref"]
+            isOneToOne: false
+            referencedRelation: "wabas_public"
             referencedColumns: ["id"]
           },
           {
@@ -1084,7 +1098,41 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      wabas_public: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          meta_business_id: string | null
+          name: string | null
+          waba_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          meta_business_id?: string | null
+          name?: string | null
+          waba_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          meta_business_id?: string | null
+          name?: string | null
+          waba_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wabas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_invitation: {
@@ -1113,6 +1161,10 @@ export type Database = {
       }
       create_workspace_for_current_user: {
         Args: { p_name: string }
+        Returns: string
+      }
+      current_user_email: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       get_contacts_masked: {
@@ -1170,7 +1222,7 @@ export type Database = {
         Returns: string
       }
       setup_first_user_workspace: {
-        Args: { p_name?: string }
+        Args: Record<PropertyKey, never> | { p_name?: string }
         Returns: string
       }
       update_waba_credentials: {
