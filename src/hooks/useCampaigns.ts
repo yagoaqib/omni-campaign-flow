@@ -30,13 +30,19 @@ export function useCampaigns() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Carregar campanhas com estatísticas
-  const loadCampaigns = useCallback(async () => {
+  // Carregar campanhas com estatísticas filtradas por workspace
+  const loadCampaigns = useCallback(async (workspaceId?: string) => {
+    if (!workspaceId) {
+      setCampaigns([]);
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data: campaignsData, error } = await supabase
         .from("campaigns")
         .select("*")
+        .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -130,7 +136,7 @@ export function useCampaigns() {
         description: `Campanha "${name}" criada com sucesso.`,
       });
 
-      await loadCampaigns();
+      await loadCampaigns(workspaceId);
       return data;
 
     } catch (error) {
@@ -142,7 +148,7 @@ export function useCampaigns() {
       });
       return null;
     }
-  }, [toast, loadCampaigns]);
+  }, [toast]);
 
   // Atualizar status da campanha
   const updateCampaignStatus = useCallback(async (campaignId: string, status: string) => {
@@ -204,7 +210,7 @@ export function useCampaigns() {
         description: "Campanha duplicada com sucesso.",
       });
 
-      await loadCampaigns();
+      // Note: loadCampaigns will be called by the consuming component with workspaceId
       return data;
 
     } catch (error) {
@@ -216,7 +222,7 @@ export function useCampaigns() {
       });
       return null;
     }
-  }, [toast, loadCampaigns]);
+  }, [toast]);
 
   // Deletar campanha
   const deleteCampaign = useCallback(async (campaignId: string) => {
@@ -246,9 +252,8 @@ export function useCampaigns() {
     }
   }, [toast]);
 
-  useEffect(() => {
-    loadCampaigns();
-  }, [loadCampaigns]);
+  // Remove auto-loading on mount since we need workspaceId
+  // Components should call loadCampaigns(workspaceId) when workspace is available
 
   return {
     campaigns,

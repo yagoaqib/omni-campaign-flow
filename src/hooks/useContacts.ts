@@ -48,13 +48,20 @@ export function useContacts() {
   });
   const { toast } = useToast();
 
-  // Carregando listas de contatos
-  const loadContactLists = useCallback(async () => {
+  // Carregando listas de contatos filtradas por workspace
+  const loadContactLists = useCallback(async (workspaceId?: string) => {
+    if (!workspaceId) {
+      setContactLists([]);
+      setTotalStats({ total: 0, withWhatsapp: 0, withoutWhatsapp: 0, activeLists: 0 });
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data: audiences, error } = await supabase
         .from("audiences")
         .select("*")
+        .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -168,7 +175,7 @@ export function useContacts() {
         description: `Lista "${name}" criada com sucesso.`,
       });
 
-      await loadContactLists();
+      // Note: loadContactLists will be called by consuming component with workspaceId
       return data;
 
     } catch (error) {
@@ -180,7 +187,7 @@ export function useContacts() {
       });
       return null;
     }
-  }, [toast, loadContactLists]);
+  }, [toast]);
 
   // Importar contatos via CSV
   const importContactsFromCSV = useCallback(async (
@@ -214,7 +221,7 @@ export function useContacts() {
         description: `${csvData.length} contatos importados com sucesso.`,
       });
 
-      await loadContactLists();
+      // Note: loadContactLists will be called by consuming component with workspaceId
       await loadContacts(audienceId);
 
     } catch (error) {
@@ -225,7 +232,7 @@ export function useContacts() {
         variant: "destructive",
       });
     }
-  }, [toast, loadContactLists, loadContacts]);
+  }, [toast, loadContacts]);
 
   // Atualizar contato
   const updateContact = useCallback(async (contactId: string, updates: Partial<Contact>) => {
@@ -262,9 +269,8 @@ export function useContacts() {
     }
   }, [toast]);
 
-  useEffect(() => {
-    loadContactLists();
-  }, [loadContactLists]);
+  // Remove auto-loading on mount since we need workspaceId
+  // Components should call loadContactLists(workspaceId) when workspace is available
 
   return {
     contacts,

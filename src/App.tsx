@@ -13,6 +13,7 @@ import Contacts from "./pages/Contacts";
 import Senders from "./pages/Senders";
 import Reports from "./pages/Reports";
 import Admin from "./pages/Admin";
+import WorkspaceTest from "./pages/WorkspaceTest";
 import Logs from "./pages/Logs";
 import Performance from "./pages/Performance";
 
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/senders" element={<Senders />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/workspace-test" element={<WorkspaceTest />} />
           <Route path="/logs" element={<Logs />} />
           <Route path="/performance" element={<Performance />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

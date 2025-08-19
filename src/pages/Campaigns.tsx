@@ -7,15 +7,22 @@ import { Link } from "react-router-dom"
 import { useEffect } from "react"
 import { useCampaigns } from "@/hooks/useCampaigns"
 import { useToast } from "@/hooks/use-toast"
+import { useWorkspace } from "@/hooks/useWorkspace"
 
 const Campaigns = () => {
-  const { campaigns, loading, updateCampaignStatus } = useCampaigns()
+  const { activeWorkspace } = useWorkspace()
+  const { campaigns, loading, loadCampaigns, updateCampaignStatus } = useCampaigns()
   
   const pauseCampaign = (id: string) => updateCampaignStatus(id, "PAUSED")
   const resumeCampaign = (id: string) => updateCampaignStatus(id, "RUNNING")
   const { toast } = useToast()
 
-  useEffect(() => { document.title = "Campanhas | Console" }, [])
+  useEffect(() => { 
+    document.title = "Campanhas | Console"
+    if (activeWorkspace?.id) {
+      loadCampaigns(activeWorkspace.id)
+    }
+  }, [activeWorkspace?.id, loadCampaigns])
 
   const getStatusColor = (status: string) => {
     switch (status) {
