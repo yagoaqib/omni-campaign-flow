@@ -6,7 +6,128 @@ const corsHeaders = {
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Real phone number validation using external APIs
+// Meta WhatsApp Business API validation
+async function validateWithMeta(phone: string, accessToken: string): Promise<{
+  isValid: boolean;
+  hasWhatsApp: boolean;
+  isLandline: boolean;
+  description?: string;
+}> {
+  try {
+    // Use Meta's Phone Number Insights API to check if number has WhatsApp
+    const response = await fetch(`https://graph.facebook.com/v19.0/phone_number_insights`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        phone_number: phone,
+        fields: ['carrier', 'line_type']
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        isValid: true,
+        hasWhatsApp: true, // Meta API only returns data for WhatsApp-enabled numbers
+        isLandline: data.line_type === 'LANDLINE',
+        description: `Validado via Meta API - ${data.carrier || 'Operadora desconhecida'}`
+      };
+    } else {
+      // Number not found in Meta API = no WhatsApp
+      return {
+        isValid: true,
+        hasWhatsApp: false,
+        isLandline: false,
+        description: 'Número válido mas sem WhatsApp (verificado via Meta API)'
+      };
+    }
+  } catch (error) {
+    console.error('Meta API validation error:', error);
+    throw error;
+  }
+}
+
+// Infobip Number Lookup API validation
+async function validateWithInfobip(phone: string, apiKey: string): Promise<{
+  isValid: boolean;
+  hasWhatsApp: boolean;
+  isLandline: boolean;
+  description?: string;
+}> {
+  try {
+    // Use Infobip Number Lookup to validate number and check type
+    const response = await fetch(`https://api.infobip.com/number/1/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `App ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        to: [phone]
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const result = data.results?.[0];
+      
+      if (result) {
+        return {
+          isValid: result.status === 'VALID',
+          hasWhatsApp: result.mccMnc !== null, // Available for mobile numbers
+          isLandline: result.numberType === 'LANDLINE',
+          description: `Validado via Infobip - ${result.numberType} (${result.originalNetwork || 'Rede desconhecida'})`
+        };
+      }
+    }
+    
+    throw new Error('Infobip API validation failed');
+  } catch (error) {
+    console.error('Infobip API validation error:', error);
+    throw error;
+  }
+}
+
+// Twilio Lookup API validation
+async function validateWithTwilio(phone: string, accountSid: string, authToken: string): Promise<{
+  isValid: boolean;
+  hasWhatsApp: boolean;
+  isLandline: boolean;
+  description?: string;
+}> {
+  try {
+    const auth = btoa(`${accountSid}:${authToken}`);
+    
+    // Use Twilio Lookup API with carrier and line type info
+    const response = await fetch(`https://lookups.twilio.com/v2/PhoneNumbers/${encodeURIComponent(phone)}?Fields=line_type_intelligence,carrier`, {
+      headers: {
+        'Authorization': `Basic ${auth}`
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const lineType = data.line_type_intelligence?.type;
+      
+      return {
+        isValid: data.valid,
+        hasWhatsApp: lineType === 'mobile', // Assume mobile numbers can have WhatsApp
+        isLandline: lineType === 'landline',
+        description: `Validado via Twilio - ${lineType} (${data.carrier?.name || 'Operadora desconhecida'})`
+      };
+    }
+    
+    throw new Error('Twilio API validation failed');
+  } catch (error) {
+    console.error('Twilio API validation error:', error);
+    throw error;
+  }
+}
+
+// Enhanced phone number validation using real APIs
 async function validatePhoneNumber(phone: string, workspace_id: string): Promise<{
   isValid: boolean;
   hasWhatsApp: boolean;
@@ -17,6 +138,7 @@ async function validatePhoneNumber(phone: string, workspace_id: string): Promise
 }> {
   const cleanPhone = phone.replace(/\D/g, '');
   
+  // Basic format check
   if (cleanPhone.length < 10) {
     return {
       isValid: false,
@@ -29,28 +151,11 @@ async function validatePhoneNumber(phone: string, workspace_id: string): Promise
   }
 
   try {
-    // Step 1: Basic Brazilian number format validation
-    const isValidBrazilianNumber = cleanPhone.length >= 10 && cleanPhone.length <= 11;
-    if (!isValidBrazilianNumber) {
-      return {
-        isValid: false,
-        hasWhatsApp: false,
-        isLandline: false,
-        reason: 'invalid_format',
-        description: 'Formato de número brasileiro inválido',
-        cost: 0.001
-      };
-    }
-
-    // Skip landline/mobile heuristics and ninth digit checks
-    // Accept numbers with basic length validation; delivery failures will be handled during dispatch
-    // isLandline is not determined at this stage
-
-    // Step 4: Check for duplicates in the same workspace
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
+    // Check for duplicates first (free check)
     const { data: existingContacts } = await supabase
       .from('contacts')
       .select('id')
@@ -69,18 +174,70 @@ async function validatePhoneNumber(phone: string, workspace_id: string): Promise
       };
     }
 
-    // Step 5: Assume valid mobile numbers have WhatsApp
-    // Real validation will happen during dispatch - failed sends will be tracked
-    // This approach is more pragmatic than using unreliable third-party validation
-    const hasWhatsApp = true; // Assume all valid mobile numbers have WhatsApp
-    
+    // Get API credentials from Supabase secrets
+    const metaToken = Deno.env.get('META_ACCESS_TOKEN');
+    const infobipApiKey = Deno.env.get('INFOBIP_API_KEY');
+    const twilioSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+    const twilioToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+
+    let validationResult;
+    let validationCost = 0.01; // Base cost for API validation
+
+    // Try Meta API first (most accurate for WhatsApp)
+    if (metaToken) {
+      try {
+        const metaResult = await validateWithMeta(phone, metaToken);
+        validationResult = metaResult;
+        validationCost = 0.015; // Meta API cost
+      } catch (error) {
+        console.log('Meta API failed, trying fallback:', error.message);
+      }
+    }
+
+    // Fallback to Infobip if Meta fails
+    if (!validationResult && infobipApiKey) {
+      try {
+        const infobipResult = await validateWithInfobip(phone, infobipApiKey);
+        validationResult = infobipResult;
+        validationCost = 0.012; // Infobip cost
+      } catch (error) {
+        console.log('Infobip API failed, trying Twilio:', error.message);
+      }
+    }
+
+    // Final fallback to Twilio
+    if (!validationResult && twilioSid && twilioToken) {
+      try {
+        const twilioResult = await validateWithTwilio(phone, twilioSid, twilioToken);
+        validationResult = twilioResult;
+        validationCost = 0.01; // Twilio cost
+      } catch (error) {
+        console.log('Twilio API failed:', error.message);
+      }
+    }
+
+    // If all APIs fail, use basic validation
+    if (!validationResult) {
+      console.log('All APIs failed, using basic validation for:', phone);
+      const isValidBrazilianNumber = cleanPhone.length >= 10 && cleanPhone.length <= 11;
+      
+      return {
+        isValid: isValidBrazilianNumber,
+        hasWhatsApp: isValidBrazilianNumber, // Conservative assumption
+        isLandline: false,
+        reason: isValidBrazilianNumber ? undefined : 'invalid_format',
+        description: isValidBrazilianNumber 
+          ? 'Número válido (validação básica - APIs indisponíveis)' 
+          : 'Formato de número brasileiro inválido',
+        cost: 0.001
+      };
+    }
+
     return {
-      isValid: true,
-      hasWhatsApp,
-      isLandline: false,
-      reason: hasWhatsApp ? undefined : 'no_whatsapp',
-      description: hasWhatsApp ? 'Número móvel válido com WhatsApp' : 'Número móvel válido sem WhatsApp',
-      cost: hasWhatsApp ? 0 : 0.01
+      ...validationResult,
+      reason: !validationResult.isValid ? 'invalid_number' : 
+              !validationResult.hasWhatsApp ? 'no_whatsapp' : undefined,
+      cost: validationCost
     };
 
   } catch (error) {
