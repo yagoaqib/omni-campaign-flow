@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route } from "react-router-dom";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Campaigns from "./pages/Campaigns";
@@ -17,7 +18,7 @@ import WorkspaceTest from "./pages/WorkspaceTest";
 import ProfileSettings from "./pages/ProfileSettings";
 import Logs from "./pages/Logs";
 import Performance from "./pages/Performance";
-
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
 
@@ -27,20 +28,25 @@ const App = () => (
       <Toaster />
       <Sonner />
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/campaigns" element={<Campaigns />} />
-          <Route path="/campaigns/new" element={<CampaignCreate />} />
-          <Route path="/campaigns/:id/console" element={<CampaignConsole />} />
-          <Route path="/templates" element={<Templates />} />
-          <Route path="/contacts" element={<Contacts />} />
-          <Route path="/senders" element={<Senders />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/workspace-test" element={<WorkspaceTest />} />
-          <Route path="/profile" element={<ProfileSettings />} />
-          <Route path="/logs" element={<Logs />} />
-          <Route path="/performance" element={<Performance />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          {/* Public route */}
+          <Route path="/auth" element={<Auth />} />
+          
+          {/* Protected routes */}
+          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+          <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
+          <Route path="/campaigns/new" element={<ProtectedRoute><CampaignCreate /></ProtectedRoute>} />
+          <Route path="/campaigns/:id/console" element={<ProtectedRoute><CampaignConsole /></ProtectedRoute>} />
+          <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
+          <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+          <Route path="/senders" element={<ProtectedRoute><Senders /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/workspace-test" element={<ProtectedRoute><WorkspaceTest /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+          <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
+          <Route path="/performance" element={<ProtectedRoute><Performance /></ProtectedRoute>} />
+          
+          {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
     </TooltipProvider>

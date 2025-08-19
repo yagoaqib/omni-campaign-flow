@@ -18,6 +18,7 @@ import { useWorkspace } from "@/hooks/useWorkspace"
 import { useNotifications } from "@/hooks/useNotifications"
 import { useRealTimeMetrics } from "@/hooks/useRealTimeMetrics"
 import { useBalance } from "@/hooks/useBalance"
+import { useAuth } from "@/hooks/useAuth"
 import { useUserProfile } from "@/hooks/useUserProfile"
 // import { useToast } from "@/hooks/use-toast"
 import { formatDistanceToNow } from "date-fns"
@@ -44,6 +45,7 @@ export function TopBar() {
   const { metrics, loading: metricsLoading } = useRealTimeMetrics();
   const { balance, loading: balanceLoading } = useBalance();
   const { profile, loadProfile, getInitials } = useUserProfile();
+  const { signOut } = useAuth();
   const [showNewWorkspaceDialog, setShowNewWorkspaceDialog] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
   // const { toast } = useToast();
@@ -275,7 +277,7 @@ export function TopBar() {
               Suporte
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Sair</DropdownMenuItem>
+            <DropdownMenuItem onClick={signOut}>Sair</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

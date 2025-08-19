@@ -9,14 +9,20 @@ import { Calendar, Cloud, Smartphone, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRealTimeMetrics } from "@/hooks/useRealTimeMetrics";
 import { useReportsData } from "@/hooks/useReportsData";
-import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useState, useEffect } from "react";
 
 
 function Index() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { metrics, loading: metricsLoading, refreshMetrics } = useRealTimeMetrics();
   const { hourlyStats, loading: reportsLoading } = useReportsData();
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    console.log("User authenticated:", user?.email);
+  }, [user]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
