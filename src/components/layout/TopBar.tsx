@@ -29,7 +29,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
-// Fallback for demo/mock data
+// Fallback for demo/mock data - remove once we have real workspaces
 const mockWorkspaces = [
   { id: "1", name: "Cliente A", status: "online" },
   { id: "2", name: "Cliente B", status: "online" },
@@ -62,9 +62,9 @@ export function TopBar() {
     }
   };
 
-  // Use real workspaces or fallback to mock data
-  const displayWorkspaces = workspaces.length > 0 ? workspaces : mockWorkspaces;
-  const currentWorkspace = activeWorkspace || { name: "Cliente A", id: "1" };
+  // Use real workspaces only
+  const displayWorkspaces = workspaces;
+  const currentWorkspace = activeWorkspace || (workspaces.length > 0 ? workspaces[0] : { name: "Nenhum workspace", id: "" });
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -88,15 +88,9 @@ export function TopBar() {
               <DropdownMenuItem 
                 key={workspace.id} 
                 className="flex items-center gap-2"
-                onClick={() => {
-                  if (workspaces.length > 0) {
-                    switchWorkspace(workspace);
-                  }
-                }}
+                onClick={() => switchWorkspace(workspace)}
               >
-                <div className={`w-2 h-2 rounded-full ${
-                  (workspace as any).status === 'offline' ? 'bg-muted-foreground' : 'bg-success'
-                }`}></div>
+                <div className="w-2 h-2 bg-success rounded-full"></div>
                 <span>{workspace.name}</span>
                 {workspace.id === currentWorkspace.id && (
                   <Badge variant="secondary" className="ml-auto text-xs">Atual</Badge>
