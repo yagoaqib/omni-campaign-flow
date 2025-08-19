@@ -132,13 +132,13 @@ export function useWorkspace() {
         .limit(1);
 
       if (!existingWorkspaces || existingWorkspaces.length === 0) {
-        // First user - use setup function
-        const { data: workspaceId, error } = await supabase.rpc('setup_first_user_workspace');
+        // First user - use setup function with provided name
+        const { data: workspaceId, error } = await supabase.rpc('setup_first_user_workspace', { p_name: name });
         
         if (error) throw error;
         
         await loadWorkspaces();
-        return { id: workspaceId, name: 'Meu Workspace' };
+        return { id: workspaceId, name };
       } else {
         // Normal workspace creation
         const { data, error } = await supabase

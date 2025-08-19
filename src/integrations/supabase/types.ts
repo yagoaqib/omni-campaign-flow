@@ -1104,7 +1104,7 @@ export type Database = {
         Returns: string
       }
       setup_first_user_workspace: {
-        Args: Record<PropertyKey, never>
+        Args: Record<PropertyKey, never> | { p_name?: string }
         Returns: string
       }
     }
