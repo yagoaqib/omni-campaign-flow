@@ -496,6 +496,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
           status: string
           token: string
+          token_hash: string | null
           workspace_id: string
         }
         Insert: {
@@ -508,6 +509,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           status?: string
           token: string
+          token_hash?: string | null
           workspace_id: string
         }
         Update: {
@@ -520,6 +522,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           status?: string
           token?: string
+          token_hash?: string | null
           workspace_id?: string
         }
         Relationships: [
