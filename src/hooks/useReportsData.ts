@@ -83,6 +83,9 @@ export function useReportsData() {
 
       setCampaigns(campaignReports);
 
+      // Collect all dispatch jobs from all campaigns
+      const allJobs = (campaignsData || []).flatMap(campaign => campaign.dispatch_jobs || []);
+      
       // Generate simple hourly statistics (placeholder until we have proper timestamps)
       const hourlyStatsArray = [];
       const now = new Date();
