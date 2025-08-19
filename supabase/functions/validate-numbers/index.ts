@@ -104,18 +104,10 @@ async function validatePhoneNumber(phone: string, workspace_id: string): Promise
       };
     }
 
-    // Step 5: Real WhatsApp validation using Meta API
-    // This requires integration with actual WhatsApp Business API
-    // For production, implement one of these approaches:
-    
-    // Option A: Use Meta's WhatsApp Business API to send a test message
-    // const hasWhatsApp = await testWhatsAppNumber(cleanPhone);
-    
-    // Option B: Use third-party validation services (Infobip, Twilio, etc.)
-    // const hasWhatsApp = await validateWithThirdParty(cleanPhone);
-    
-    // For now, using intelligent heuristics based on mobile operators and patterns
-    const hasWhatsApp = Math.random() > 0.12; // 88% probability for valid mobile numbers
+    // Step 5: Assume valid mobile numbers have WhatsApp
+    // Real validation will happen during dispatch - failed sends will be tracked
+    // This approach is more pragmatic than using unreliable third-party validation
+    const hasWhatsApp = true; // Assume all valid mobile numbers have WhatsApp
     
     return {
       isValid: true,
