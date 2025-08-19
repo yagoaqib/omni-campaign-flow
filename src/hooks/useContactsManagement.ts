@@ -60,11 +60,9 @@ export function useContactsManagement() {
     try {
       setLoading(true);
       
-      // Load contacts
+      // Load contacts using secure RPC
       const { data: contactsData, error: contactsError } = await supabase
-        .from('contacts')
-        .select('*')
-        .eq('workspace_id', activeWorkspace.id);
+        .rpc('get_contacts_masked', { _workspace_id: activeWorkspace.id });
 
       if (contactsError) throw contactsError;
 

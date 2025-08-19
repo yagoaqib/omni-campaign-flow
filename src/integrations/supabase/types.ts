@@ -954,6 +954,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_contacts_masked: {
+        Args: { _workspace_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          has_whatsapp: boolean
+          id: string
+          last_contact: string
+          name: string
+          phone: string
+          source: string
+          updated_at: string
+          workspace_id: string
+        }[]
+      }
       has_workspace_role: {
         Args: { _roles: string[]; _workspace_id: string }
         Returns: boolean
