@@ -56,7 +56,7 @@ export default function SecureWABAManager({
 
     try {
       // Call RPC function to securely update credentials
-      const { error } = await supabase.rpc('update_waba_credentials', {
+      const { error } = await supabase.rpc('update_waba_credentials' as any, {
         p_waba_id: editingWaba.id,
         p_name: editingWaba.name,
         p_meta_business_id: editingWaba.meta_business_id,
@@ -97,7 +97,7 @@ export default function SecureWABAManager({
 
     try {
       // Call RPC function to securely create WABA
-      const { error } = await supabase.rpc('create_waba_secure', {
+      const { error } = await supabase.rpc('create_waba_secure' as any, {
         p_workspace_id: wabas[0]?.workspace_id, // Use workspace from existing WABAs
         p_name: newWaba.name,
         p_meta_business_id: newWaba.meta_business_id,

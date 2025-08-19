@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout"
-import ClientCredentialsForm from "@/components/admin/ClientCredentialsForm"
+import SecureWABAManager from "@/components/admin/SecureWABAManager"
 import { UserManagement } from "@/components/admin/UserManagement"
 import { useWorkspace } from "@/hooks/useWorkspace"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 const Admin = () => {
-  const { activeWorkspace, wabas, workspaces, loading, loadWorkspaces, updateWaba, createWaba, deleteWorkspace } = useWorkspace();
+  const { activeWorkspace, wabas, workspaces, loading, loadWorkspaces, loadWabas, deleteWorkspace } = useWorkspace();
   const [editingWorkspace, setEditingWorkspace] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const { toast } = useToast();
@@ -207,12 +207,15 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="whatsapp">
-            <ClientCredentialsForm 
-              workspaceName={activeWorkspace?.name || "Cliente"}
-              wabas={wabas}
-              onUpdateWaba={updateWaba}
-              onCreateWaba={createWaba}
-            />
+            {activeWorkspace && (
+              <SecureWABAManager 
+                workspaceName={activeWorkspace.name}
+                wabas={wabas}
+                onUpdate={async () => {
+                  await loadWabas(activeWorkspace.id);
+                }}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>

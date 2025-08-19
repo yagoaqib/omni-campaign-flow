@@ -126,8 +126,9 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
           throw new Error("WABA não selecionada");
         }
         
+        // For now, use placeholder token - should get from secure credentials
         const api = createMetaApi({
-          access_token: selectedWabaData.access_token || "",
+          access_token: "placeholder_token",
           waba_id: selectedWabaData.waba_id,
           phone_number_id: meta.phone_number_id,
           graph_version: meta.graph_version
@@ -174,8 +175,9 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
       const selectedWabaData = wabas.find(w => w.id === selectedWaba);
       if (!selectedWabaData) return;
       
+      // For now, use placeholder token - should get from secure credentials
       const api = createMetaApi({
-        access_token: selectedWabaData.access_token || "",
+        access_token: "placeholder_token",
         waba_id: selectedWabaData.waba_id,
         phone_number_id: meta.phone_number_id,
         graph_version: meta.graph_version
@@ -207,8 +209,9 @@ export default function NumberWizard({ open, onOpenChange, onSave }: WizardProps
           throw new Error("WABA não selecionada");
         }
         
+        // For now, use placeholder token - should get from secure credentials
         const api = createMetaApi({
-          access_token: selectedWabaData.access_token || "",
+          access_token: "placeholder_token",
           waba_id: selectedWabaData.waba_id,
           phone_number_id: meta.phone_number_id,
           graph_version: meta.graph_version

@@ -12,6 +12,16 @@ type WABAPublic = Pick<
 // Export types for use in other components
 export type { WABAFull, WABAPublic };
 
+export interface WABACredentials {
+  id: string;
+  waba_id: string;
+  name: string | null;
+  access_token: string | null;
+  app_secret: string | null;
+  verify_token: string | null;
+  meta_business_id: string;
+}
+
 export function useWorkspace() {
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -63,19 +73,17 @@ export function useWorkspace() {
     await loadWabas(workspace.id);
   }, [loadWabas]);
 
-  const updateWaba = useCallback(async (waba: WABAFull) => {
+  const updateWaba = useCallback(async (waba: WABAPublic) => {
     try {
-      const { error } = await supabase
-        .from("wabas")
-        .update({
-          verify_token: waba.verify_token,
-          app_secret: waba.app_secret,
-          access_token: waba.access_token,
-          name: waba.name,
-          meta_business_id: waba.meta_business_id,
-          waba_id: waba.waba_id,
-        })
-        .eq("id", waba.id);
+      const { error } = await supabase.rpc('update_waba_credentials' as any, {
+        p_waba_id: waba.id,
+        p_name: waba.name,
+        p_meta_business_id: waba.meta_business_id,
+        p_waba_id_text: waba.waba_id,
+        p_verify_token: null,
+        p_app_secret: null,
+        p_access_token: null
+      });
 
       if (error) throw error;
       
@@ -90,21 +98,19 @@ export function useWorkspace() {
     }
   }, [activeWorkspace, loadWabas]);
 
-  const createWaba = useCallback(async (wabaData: Partial<WABAFull>) => {
+  const createWaba = useCallback(async (wabaData: Partial<WABAPublic>) => {
     if (!activeWorkspace) return false;
 
     try {
-      const { error } = await supabase
-        .from("wabas")
-        .insert({
-          workspace_id: activeWorkspace.id,
-          name: wabaData.name || "",
-          meta_business_id: wabaData.meta_business_id || "",
-          waba_id: wabaData.waba_id || "",
-          verify_token: wabaData.verify_token,
-          app_secret: wabaData.app_secret,
-          access_token: wabaData.access_token,
-        });
+      const { error } = await supabase.rpc('create_waba_secure' as any, {
+        p_workspace_id: activeWorkspace.id,
+        p_name: wabaData.name || "",
+        p_meta_business_id: wabaData.meta_business_id || "",
+        p_waba_id: wabaData.waba_id || "",
+        p_verify_token: null,
+        p_app_secret: null,
+        p_access_token: null
+      });
 
       if (error) throw error;
       
