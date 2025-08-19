@@ -12,6 +12,7 @@ export function useWorkspace() {
   const [loading, setLoading] = useState(false);
 
   const loadWorkspaces = useCallback(async () => {
+    console.log("useWorkspace - loadWorkspaces called");
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -20,9 +21,11 @@ export function useWorkspace() {
         .order("name");
 
       if (error) throw error;
+      console.log("useWorkspace - workspaces loaded:", data);
       setWorkspaces(data || []);
       if (!activeWorkspace && data?.length) {
         const firstWorkspace = data[0];
+        console.log("useWorkspace - setting activeWorkspace:", firstWorkspace);
         setActiveWorkspace(firstWorkspace);
         await loadWabas(firstWorkspace.id);
       }

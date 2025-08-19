@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { processAndUploadAvatar } from "@/lib/imageUtils"
 
 const ProfileSettings = () => {
-  const { activeWorkspace } = useWorkspace()
+  const { activeWorkspace, loadWorkspaces } = useWorkspace()
   const { profile, loading, loadProfile, updateProfile, getInitials } = useUserProfile()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -28,9 +28,19 @@ const ProfileSettings = () => {
     avatar_url: ""
   })
 
+  // Load workspaces on component mount
   useEffect(() => {
+    console.log("ProfileSettings - Component mounted, loading workspaces");
+    loadWorkspaces();
+  }, [loadWorkspaces]);
+
+  useEffect(() => {
+    console.log("ProfileSettings - activeWorkspace changed:", activeWorkspace);
     if (activeWorkspace?.id) {
-      loadProfile(activeWorkspace.id)
+      console.log("Loading profile for workspace:", activeWorkspace.id);
+      loadProfile(activeWorkspace.id);
+    } else {
+      console.error("No activeWorkspace found:", activeWorkspace);
     }
   }, [activeWorkspace?.id, loadProfile])
 
@@ -46,43 +56,50 @@ const ProfileSettings = () => {
   }, [profile])
 
   const handleSave = async () => {
+    console.log("handleSave called - activeWorkspace:", activeWorkspace);
+    console.log("handleSave called - profile:", profile);
+    
+    if (!activeWorkspace?.id) {
+      console.error("No activeWorkspace.id found");
+      toast({
+        title: "Erro",
+        description: "Workspace não encontrado. Recarregue a página.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!profile) {
-      console.error("Profile not loaded, attempting to reload...")
-      if (activeWorkspace?.id) {
-        await loadProfile(activeWorkspace.id)
-      } else {
+      console.error("Profile not loaded, attempting to reload...");
+      await loadProfile(activeWorkspace.id);
+      
+      // Wait a moment for the profile to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (!profile) {
         toast({
-          title: "Erro",
-          description: "Workspace não encontrado. Recarregue a página.",
+          title: "Erro", 
+          description: "Perfil não carregado. Recarregue a página e tente novamente.",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
     }
 
-    if (!profile) {
-      toast({
-        title: "Erro", 
-        description: "Perfil não carregado. Recarregue a página e tente novamente.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    console.log("Attempting to save profile:", { profile, formData })
-    const success = await updateProfile(formData)
+    console.log("Attempting to save profile:", { profile, formData });
+    const success = await updateProfile(formData);
     
     if (success) {
       toast({
         title: "Perfil atualizado",
         description: "Suas informações foram salvas com sucesso.",
-      })
+      });
     } else {
       toast({
         title: "Erro",
         description: "Não foi possível atualizar o perfil.",
         variant: "destructive",
-      })
+      });
     }
   }
 
