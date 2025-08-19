@@ -38,21 +38,42 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Load campaign numbers with randomization for load balancing
-    const { data: cnums, error: cnErr } = await supabase
-      .from('campaign_numbers')
-      .select('phone_number_ref, pos, quota, min_quality')
+    // Load cascade policy for this campaign
+    const { data: cascadePolicy } = await supabase
+      .from('cascade_policies')
+      .select('*')
       .eq('campaign_id', campaign_id)
-      .order('pos', { ascending: true });
+      .single();
+
+    let cnums: any[] = [];
     
-    // Shuffle numbers for load balancing
-    if (cnums && cnums.length > 1) {
-      for (let i = cnums.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [cnums[i], cnums[j]] = [cnums[j], cnums[i]];
+    if (cascadePolicy && cascadePolicy.numbers_order?.length > 0) {
+      // Use cascade policy order
+      cnums = cascadePolicy.numbers_order.map((phoneNumberRef: string, index: number) => ({
+        phone_number_ref: phoneNumberRef,
+        pos: index,
+        quota: cascadePolicy.number_quotas?.[phoneNumberRef] || 1000,
+        min_quality: cascadePolicy.min_quality || 'HIGH'
+      }));
+    } else {
+      // Fallback to campaign_numbers table with randomization for load balancing
+      const { data: campaignNumbers, error: cnErr } = await supabase
+        .from('campaign_numbers')
+        .select('phone_number_ref, pos, quota, min_quality')
+        .eq('campaign_id', campaign_id)
+        .order('pos', { ascending: true });
+      
+      if (cnErr) throw cnErr;
+      cnums = campaignNumbers || [];
+      
+      // Shuffle numbers for load balancing when no cascade policy
+      if (cnums.length > 1) {
+        for (let i = cnums.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [cnums[i], cnums[j]] = [cnums[j], cnums[i]];
+        }
       }
     }
-    if (cnErr) throw cnErr;
 
     const numberIds = (cnums ?? []).map((n: any) => n.phone_number_ref);
     const { data: numbers, error: pnErr } = await supabase
@@ -74,7 +95,7 @@ Deno.serve(async (req) => {
       .select('id, attempts')
       .eq('campaign_id', campaign_id)
       .eq('status', 'QUEUED')
-      .lt('attempts', 3) // Only retry up to 3 times
+      .lt('attempts', cascadePolicy?.retry_max || 3) // Use policy retry max or default
       .limit(capacity);
     if (jobsErr) throw jobsErr;
 

@@ -23,7 +23,7 @@ export default function CampaignCreate() {
   const [selectedAudience, setSelectedAudience] = useState<string>("");
   const [autoBalance, setAutoBalance] = useState(true);
   const [tps, setTps] = useState<number[]>([20]);
-  const [cascadeConfig, setCascadeConfig] = useState<CascadePolicyConfig>(defaultCascadePolicyConfig);
+  const [createdCampaignId, setCreatedCampaignId] = useState<string | null>(null);
 
   // Farm models
   const [farmModel, setFarmModel] = useState<"none" | "1k" | "10k" | "100k">("none");
@@ -47,13 +47,7 @@ export default function CampaignCreate() {
     document.title = campaignType === "farm" ? "Nova Campanha – Farm de Números | Console" : "Nova Campanha | Console";
   }, [campaignType]);
 
-  const syncCascadeFromAlloc = (ids: string[], alloc: Record<string, number>) => {
-    setCascadeConfig((c) => ({
-      ...c,
-      numbers_order: ids,
-      number_quotas: ids.reduce((acc, id) => ({ ...acc, [id]: alloc[id] ?? 0 }), {} as Record<string, number>),
-    }));
-  };
+  // Remove cascade sync since policy editor handles persistence now
 
   const toggleNumber = (id: string) => {
     setSelectedIds((curr) => {
@@ -62,7 +56,7 @@ export default function CampaignCreate() {
         const nextIds = curr.filter((x) => x !== id);
         setAllocations((prev) => {
           const { [id]: _drop, ...rest } = prev;
-          syncCascadeFromAlloc(nextIds, rest);
+          // Don't sync cascade anymore - handled by editor
           return rest;
         });
         return nextIds;
@@ -76,7 +70,7 @@ export default function CampaignCreate() {
         const nextAlloc: Record<string, number> = {};
         nextIds.forEach((nid, i) => (nextAlloc[nid] = base + (i < rem ? 1 : 0)));
         setAllocations(nextAlloc);
-        syncCascadeFromAlloc(nextIds, nextAlloc);
+        // Don't sync cascade anymore - handled by editor
       }
       return nextIds;
     });
@@ -89,7 +83,7 @@ export default function CampaignCreate() {
     const nextAlloc: Record<string, number> = {};
     selectedIds.forEach((id, i) => (nextAlloc[id] = base + (i < rem ? 1 : 0)));
     setAllocations(nextAlloc);
-    syncCascadeFromAlloc(selectedIds, nextAlloc);
+    // Don't sync cascade anymore - handled by editor
   };
 
   const applyModel = (model: "1k" | "10k" | "100k") => {
@@ -102,7 +96,7 @@ export default function CampaignCreate() {
       const nextAlloc: Record<string, number> = {};
       selectedIds.forEach((id, i) => (nextAlloc[id] = base + (i < rem ? 1 : 0)));
       setAllocations(nextAlloc);
-      syncCascadeFromAlloc(selectedIds, nextAlloc);
+      // Don't sync cascade anymore - handled by editor
     }
   };
   const next = () => setStep((s) => Math.min(4, s + 1));
@@ -121,6 +115,8 @@ export default function CampaignCreate() {
         selectedAudience || undefined,
         campaignType === "template" ? "MARKETING" : "UTILITY"
       );
+      
+      setCreatedCampaignId(campaign.id); // Store campaign ID for policy editor
 
       const path = `/campaigns/${campaign.id}/console`;
       openTab({ 
@@ -269,7 +265,7 @@ export default function CampaignCreate() {
                                     const val = Number(e.target.value || 0);
                                     const next = { ...allocations, [n.id]: val } as Record<string, number>;
                                     setAllocations(next);
-                                    syncCascadeFromAlloc(selectedIds, next);
+                                    // Policy editor handles cascade sync now
                                   }}
                                 />
                               </div>
@@ -303,7 +299,7 @@ export default function CampaignCreate() {
 
 
               <div className="pt-4">
-                <CascadePolicyEditor value={cascadeConfig} onChange={setCascadeConfig} />
+                <CascadePolicyEditor campaignId={createdCampaignId || undefined} />
               </div>
             </CardContent>
           </Card>
@@ -413,8 +409,10 @@ export default function CampaignCreate() {
               </div>
 
               <div>
-                <div className="text-sm text-muted-foreground mb-2">Configuração de Cascata (JSON)</div>
-                <pre className="text-xs rounded-md border p-3 bg-muted/30 overflow-auto">{JSON.stringify(cascadeConfig, null, 2)}</pre>
+                <div className="text-sm text-muted-foreground mb-2">Política de Cascata</div>
+                <div className="text-sm text-muted-foreground">
+                  {createdCampaignId ? 'Política salva automaticamente' : 'Crie a campanha para configurar política de cascata'}
+                </div>
               </div>
             </CardContent>
           </Card>

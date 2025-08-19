@@ -74,17 +74,114 @@ function moveItem<T>(arr: T[], from: number, to: number) {
 }
 
 interface Props {
-  value: CascadePolicyConfig;
-  onChange: (v: CascadePolicyConfig) => void;
+  campaignId?: string;
+  value?: CascadePolicyConfig;
+  onChange?: (v: CascadePolicyConfig) => void;
 }
 
-export default function CascadePolicyEditor({ value, onChange }: Props) {
+export default function CascadePolicyEditor({ campaignId, value, onChange }: Props) {
   const { numbers: AVAILABLE_NUMBERS } = useAvailableNumbers();
-  const [cfg, setCfg] = React.useState<CascadePolicyConfig>(value ?? defaultCascadePolicyConfig);
+  const { policy, loading, savePolicy, updatePolicy } = useCascadePolicy(campaignId);
+  
+  // Initialize config from database policy or default
+  const [cfg, setCfg] = React.useState<CascadePolicyConfig>(() => {
+    if (policy) {
+      return {
+        numbers_order: policy.numbers_order || [],
+        number_quotas: policy.number_quotas || {},
+        min_quality: policy.min_quality,
+        template_stack_util: policy.template_stack_util ? [policy.template_stack_util] : [],
+        template_stack_mkt: policy.template_stack_mkt ? [policy.template_stack_mkt] : [],
+        desired_category: policy.desired_category,
+        retry: { max: policy.retry_max, backoffSec: policy.retry_backoff_sec },
+        per_number: policy.per_number || {},
+        rules: {
+          progressOnlyOnQualityDrop: policy.rules?.progressOnlyOnQualityDrop ?? defaultCascadePolicyConfig.rules.progressOnlyOnQualityDrop,
+          categoryChangeBehavior: policy.rules?.categoryChangeBehavior ?? defaultCascadePolicyConfig.rules.categoryChangeBehavior,
+        },
+      };
+    }
+    return value ?? defaultCascadePolicyConfig;
+  });
+  
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
+  const [saveTimeout, setSaveTimeout] = React.useState<NodeJS.Timeout | null>(null);
 
-  React.useEffect(() => setCfg(value), [value]);
-  React.useEffect(() => onChange(cfg), [cfg]);
+  // Update config when policy changes
+  React.useEffect(() => {
+    if (policy) {
+      setCfg({
+        numbers_order: policy.numbers_order || [],
+        number_quotas: policy.number_quotas || {},
+        min_quality: policy.min_quality,
+        template_stack_util: policy.template_stack_util ? [policy.template_stack_util] : [],
+        template_stack_mkt: policy.template_stack_mkt ? [policy.template_stack_mkt] : [],
+        desired_category: policy.desired_category,
+        retry: { max: policy.retry_max, backoffSec: policy.retry_backoff_sec },
+        per_number: policy.per_number || {},
+        rules: {
+          progressOnlyOnQualityDrop: policy.rules?.progressOnlyOnQualityDrop ?? defaultCascadePolicyConfig.rules.progressOnlyOnQualityDrop,
+          categoryChangeBehavior: policy.rules?.categoryChangeBehavior ?? defaultCascadePolicyConfig.rules.categoryChangeBehavior,
+        },
+      });
+    }
+  }, [policy]);
+
+  // Auto-save with debounce
+  React.useEffect(() => {
+    if (!campaignId) {
+      // If no campaignId, just call onChange for local state
+      onChange?.(cfg);
+      return;
+    }
+
+    // Clear existing timeout
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+
+    // Set new timeout for auto-save
+    const timeout = setTimeout(async () => {
+      try {
+        const policyData = {
+          numbers_order: cfg.numbers_order,
+          number_quotas: cfg.number_quotas,
+          min_quality: cfg.min_quality,
+          template_stack_util: cfg.template_stack_util[0] || null,
+          template_stack_mkt: cfg.template_stack_mkt[0] || null,
+          desired_category: cfg.desired_category,
+          retry_max: cfg.retry.max,
+          retry_backoff_sec: cfg.retry.backoffSec,
+          per_number: cfg.per_number,
+          rules: cfg.rules,
+        };
+
+        if (policy?.id) {
+          await updatePolicy(policyData);
+        } else {
+          await savePolicy(policyData);
+        }
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      }
+    }, 1000); // 1 second debounce
+
+    setSaveTimeout(timeout);
+    
+    // Also call onChange for immediate local updates
+    onChange?.(cfg);
+
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [cfg, campaignId, policy?.id, savePolicy, updatePolicy]);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (saveTimeout) clearTimeout(saveTimeout);
+    };
+  }, [saveTimeout]);
 
   const addNumber = (id: string) => {
     if (!id) return;
@@ -124,10 +221,31 @@ export default function CascadePolicyEditor({ value, onChange }: Props) {
     setCfg((c) => ({ ...c, numbers_order: moveItem(c.numbers_order, from, index) }));
   };
 
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuração por campanha – Política de Cascata</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando política de cascata...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Configuração por campanha – Política de Cascata</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Configuração por campanha – Política de Cascata</CardTitle>
+          {campaignId && (
+            <div className="text-sm text-muted-foreground">
+              {policy ? 'Salvando automaticamente...' : 'Nova política'}
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Ordem e cotas */}
