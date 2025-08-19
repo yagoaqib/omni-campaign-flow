@@ -107,6 +107,24 @@ export function useWorkspace() {
     }
   }, [activeWorkspace, loadWabas]);
 
+  const createWorkspace = useCallback(async (name: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("workspaces")
+        .insert({ name })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      await loadWorkspaces();
+      return data;
+    } catch (error) {
+      console.error("Failed to create workspace:", error);
+      return null;
+    }
+  }, [loadWorkspaces]);
+
   return {
     activeWorkspace,
     workspaces,
@@ -117,5 +135,6 @@ export function useWorkspace() {
     switchWorkspace,
     updateWaba,
     createWaba,
+    createWorkspace,
   };
 }

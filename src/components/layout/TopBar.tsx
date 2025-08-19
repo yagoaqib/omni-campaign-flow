@@ -17,8 +17,17 @@ import { useWorkspace } from "@/hooks/useWorkspace"
 import { useNotifications } from "@/hooks/useNotifications"
 import { useRealTimeMetrics } from "@/hooks/useRealTimeMetrics"
 import { useBalance } from "@/hooks/useBalance"
+import { useToast } from "@/hooks/use-toast"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 // Fallback for demo/mock data
 const mockWorkspaces = [
@@ -28,14 +37,37 @@ const mockWorkspaces = [
 ]
 
 export function TopBar() {
-  const { activeWorkspace, workspaces, loadWorkspaces, switchWorkspace } = useWorkspace();
+  const { activeWorkspace, workspaces, loadWorkspaces, switchWorkspace, createWorkspace } = useWorkspace();
   const { notifications, unreadCount, markAsRead } = useNotifications();
   const { metrics, loading: metricsLoading } = useRealTimeMetrics();
   const { balance, loading: balanceLoading } = useBalance();
+  const [showNewWorkspaceDialog, setShowNewWorkspaceDialog] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const { toast } = useToast();
   
   useEffect(() => {
     loadWorkspaces();
   }, [loadWorkspaces]);
+
+  const handleCreateWorkspace = async () => {
+    if (!newWorkspaceName.trim()) return;
+    
+    const result = await createWorkspace(newWorkspaceName);
+    if (result) {
+      toast({
+        title: "Workspace criado",
+        description: `Workspace "${newWorkspaceName}" foi criado com sucesso.`,
+      });
+      setNewWorkspaceName("");
+      setShowNewWorkspaceDialog(false);
+    } else {
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o workspace.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Use real workspaces or fallback to mock data
   const displayWorkspaces = workspaces.length > 0 ? workspaces : mockWorkspaces;
@@ -78,6 +110,41 @@ export function TopBar() {
                 )}
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            <Dialog open={showNewWorkspaceDialog} onOpenChange={setShowNewWorkspaceDialog}>
+              <DialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Workspace
+                </DropdownMenuItem>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Criar Novo Workspace</DialogTitle>
+                  <DialogDescription>
+                    Digite o nome do novo workspace que você deseja criar.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    value={newWorkspaceName}
+                    onChange={(e) => setNewWorkspaceName(e.target.value)}
+                    placeholder="Nome do workspace"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCreateWorkspace();
+                      }
+                    }}
+                  />
+                  <Button 
+                    onClick={handleCreateWorkspace}
+                    disabled={!newWorkspaceName.trim()}
+                  >
+                    Criar
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </DropdownMenuContent>
         </DropdownMenu>
 
