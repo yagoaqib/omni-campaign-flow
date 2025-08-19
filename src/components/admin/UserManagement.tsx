@@ -39,7 +39,7 @@ interface Member {
 
 export function UserManagement() {
   const { user } = useAuth()
-  const { activeWorkspace } = useWorkspace()
+  const { activeWorkspace, loadWorkspaces } = useWorkspace()
   const { toast } = useToast()
   
   const [invitations, setInvitations] = useState<Invitation[]>([])
@@ -118,9 +118,17 @@ export function UserManagement() {
   }
 
   useEffect(() => {
+    // Force load workspaces when component mounts
+    loadWorkspaces()
+  }, [loadWorkspaces])
+
+  useEffect(() => {
     if (activeWorkspace?.id) {
+      console.log("UserManagement: Active workspace found:", activeWorkspace.name)
       loadInvitations()
       loadMembers()
+    } else {
+      console.log("UserManagement: No active workspace")
     }
   }, [activeWorkspace?.id])
 
@@ -233,10 +241,13 @@ export function UserManagement() {
   if (!activeWorkspace) {
     return (
       <Card>
-        <CardContent className="p-6">
-          <p className="text-muted-foreground text-center">
+        <CardContent className="p-6 text-center space-y-4">
+          <p className="text-muted-foreground">
             Selecione um workspace para gerenciar usuários
           </p>
+          <Button onClick={loadWorkspaces} variant="outline">
+            Recarregar Workspaces
+          </Button>
         </CardContent>
       </Card>
     )
