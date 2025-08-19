@@ -1072,6 +1072,18 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      get_waba_credentials: {
+        Args: { p_waba_id?: string; p_workspace_id: string }
+        Returns: {
+          access_token: string
+          app_secret: string
+          id: string
+          meta_business_id: string
+          name: string
+          verify_token: string
+          waba_id: string
+        }[]
+      }
       has_workspace_role: {
         Args: { _roles: string[]; _workspace_id: string }
         Returns: boolean

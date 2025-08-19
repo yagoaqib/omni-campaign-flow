@@ -3,37 +3,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Eye, EyeOff, Save, Plus } from "lucide-react";
+import { Eye, EyeOff, Save, Plus, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Database } from "@/integrations/supabase/types";
-
+import { supabase } from "@/integrations/supabase/client";
 import { WABAPublic } from "@/hooks/useWorkspace";
 
-type WABA = WABAPublic;
-
-interface ClientCredentialsFormProps {
+interface SecureWABAManagerProps {
   workspaceName?: string;
-  wabas: WABA[];
-  onUpdateWaba: (waba: WABA) => Promise<boolean>;
-  onCreateWaba: (waba: Partial<WABA>) => Promise<boolean>;
+  wabas: WABAPublic[];
+  onUpdate: () => Promise<void>;
 }
 
-export default function ClientCredentialsForm({
+interface WABACredentials {
+  verify_token?: string;
+  app_secret?: string;
+  access_token?: string;
+}
+
+export default function SecureWABAManager({
   workspaceName = "Cliente",
   wabas,
-  onUpdateWaba,
-  onCreateWaba,
-}: ClientCredentialsFormProps) {
+  onUpdate,
+}: SecureWABAManagerProps) {
   const { toast } = useToast();
   const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
-  const [editingWaba, setEditingWaba] = useState<WABA | null>(null);
-  const [newWaba, setNewWaba] = useState<Partial<WABA> & { app_id?: string }>({
+  const [editingWaba, setEditingWaba] = useState<WABAPublic | null>(null);
+  const [credentials, setCredentials] = useState<WABACredentials>({});
+  const [newWaba, setNewWaba] = useState({
     name: "",
     meta_business_id: "",
     waba_id: "",
-    app_id: "",
     verify_token: "",
     app_secret: "",
     access_token: "",
@@ -51,15 +51,32 @@ export default function ClientCredentialsForm({
     setShowTokens(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleUpdateWaba = async (waba: WABA) => {
-    const success = await onUpdateWaba(waba);
-    if (success) {
+  const handleUpdateWaba = async () => {
+    if (!editingWaba) return;
+
+    try {
+      // Call RPC function to securely update credentials
+      const { error } = await supabase.rpc('update_waba_credentials', {
+        p_waba_id: editingWaba.id,
+        p_name: editingWaba.name,
+        p_meta_business_id: editingWaba.meta_business_id,
+        p_waba_id_value: editingWaba.waba_id,
+        p_verify_token: credentials.verify_token,
+        p_app_secret: credentials.app_secret,
+        p_access_token: credentials.access_token,
+      });
+
+      if (error) throw error;
+
       toast({
         title: "Credenciais atualizadas",
         description: "As credenciais da WABA foram salvas com sucesso.",
       });
       setEditingWaba(null);
-    } else {
+      setCredentials({});
+      await onUpdate();
+    } catch (error) {
+      console.error('Error updating WABA:', error);
       toast({
         title: "Erro ao salvar",
         description: "Não foi possível salvar as credenciais. Tente novamente.",
@@ -78,8 +95,20 @@ export default function ClientCredentialsForm({
       return;
     }
 
-    const success = await onCreateWaba(newWaba);
-    if (success) {
+    try {
+      // Call RPC function to securely create WABA
+      const { error } = await supabase.rpc('create_waba_secure', {
+        p_workspace_id: wabas[0]?.workspace_id, // Use workspace from existing WABAs
+        p_name: newWaba.name,
+        p_meta_business_id: newWaba.meta_business_id,
+        p_waba_id: newWaba.waba_id,
+        p_verify_token: newWaba.verify_token,
+        p_app_secret: newWaba.app_secret,
+        p_access_token: newWaba.access_token,
+      });
+
+      if (error) throw error;
+
       toast({
         title: "WABA criada",
         description: "Nova WABA foi adicionada com sucesso.",
@@ -88,13 +117,14 @@ export default function ClientCredentialsForm({
         name: "",
         meta_business_id: "",
         waba_id: "",
-        app_id: "",
         verify_token: "",
         app_secret: "",
         access_token: "",
       });
       setShowNewForm(false);
-    } else {
+      await onUpdate();
+    } catch (error) {
+      console.error('Error creating WABA:', error);
       toast({
         title: "Erro ao criar WABA",
         description: "Não foi possível criar a WABA. Tente novamente.",
@@ -105,8 +135,8 @@ export default function ClientCredentialsForm({
 
   const renderTokenField = (
     wabaId: string,
-    field: keyof WABA,
-    value: string | null,
+    field: string,
+    value: string,
     onChange: (value: string) => void,
     label: string,
     placeholder: string,
@@ -124,7 +154,7 @@ export default function ClientCredentialsForm({
           <Input
             id={`${wabaId}-${field}`}
             type={isVisible ? "text" : "password"}
-            value={value || ""}
+            value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             className="pr-10"
@@ -149,12 +179,31 @@ export default function ClientCredentialsForm({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Credenciais Meta WhatsApp Cloud</h2>
-        <p className="text-muted-foreground">
-          Configure as credenciais para {workspaceName}. Cada WABA precisa de suas próprias credenciais.
-        </p>
+      <div className="flex items-center gap-3">
+        <Shield className="h-6 w-6 text-primary" />
+        <div>
+          <h2 className="text-2xl font-bold">Gerenciamento Seguro de Credenciais</h2>
+          <p className="text-muted-foreground">
+            Configure as credenciais Meta WhatsApp para {workspaceName} com segurança aprimorada.
+          </p>
+        </div>
       </div>
+
+      {/* Security Notice */}
+      <Card className="border-amber-200 bg-amber-50">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <Shield className="h-5 w-5 text-amber-600 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">Credenciais Protegidas</p>
+              <p className="text-xs text-amber-700 mt-1">
+                As credenciais sensíveis (tokens, secrets) são armazenadas de forma segura e não são expostas na interface.
+                Apenas administradores podem atualizar essas informações.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Existing WABAs */}
       {wabas.map((waba) => (
@@ -168,12 +217,13 @@ export default function ClientCredentialsForm({
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={waba.verify_token ? "default" : "secondary"}>
-                  {waba.verify_token ? "Configurado" : "Incompleto"}
+                <Badge variant="outline" className="gap-2">
+                  <Shield className="h-3 w-3" />
+                  Configurado
                 </Badge>
                 {editingWaba?.id === waba.id ? (
                   <Button
-                    onClick={() => handleUpdateWaba(editingWaba)}
+                    onClick={handleUpdateWaba}
                     size="sm"
                     className="gap-2"
                   >
@@ -222,20 +272,12 @@ export default function ClientCredentialsForm({
                     placeholder="1234567890123456"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`${waba.id}-app-id`}>App ID</Label>
-                  <Input
-                    id={`${waba.id}-app-id`}
-                    value={(editingWaba as any).app_id || ""}
-                    onChange={(e) => setEditingWaba({ ...editingWaba, app_id: e.target.value } as any)}
-                    placeholder="1234567890123456"
-                  />
-                </div>
+                <div /> {/* Empty div for grid alignment */}
                 {renderTokenField(
                   waba.id,
                   "verify_token",
-                  editingWaba.verify_token,
-                  (value) => setEditingWaba({ ...editingWaba, verify_token: value }),
+                  credentials.verify_token || "",
+                  (value) => setCredentials({ ...credentials, verify_token: value }),
                   "Verify Token",
                   "Seu_verify_token_customizado",
                   true
@@ -243,16 +285,16 @@ export default function ClientCredentialsForm({
                 {renderTokenField(
                   waba.id,
                   "app_secret",
-                  editingWaba.app_secret,
-                  (value) => setEditingWaba({ ...editingWaba, app_secret: value }),
+                  credentials.app_secret || "",
+                  (value) => setCredentials({ ...credentials, app_secret: value }),
                   "App Secret",
                   "a1b2c3d4e5f6...",
                 )}
                 {renderTokenField(
                   waba.id,
                   "access_token",
-                  editingWaba.access_token,
-                  (value) => setEditingWaba({ ...editingWaba, access_token: value }),
+                  credentials.access_token || "",
+                  (value) => setCredentials({ ...credentials, access_token: value }),
                   "Access Token",
                   "EAAxxxxxxxxxxxxxxx"
                 )}
@@ -260,22 +302,16 @@ export default function ClientCredentialsForm({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="font-medium">Verify Token:</span>{" "}
-                  <code className="bg-muted px-2 py-1 rounded">
-                    {waba.verify_token ? "••••••••" : "Não configurado"}
-                  </code>
+                  <span className="font-medium">Status:</span>{" "}
+                  <Badge variant="default" className="ml-2">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Credenciais seguras
+                  </Badge>
                 </div>
-                <div>
-                  <span className="font-medium">App Secret:</span>{" "}
-                  <code className="bg-muted px-2 py-1 rounded">
-                    {waba.app_secret ? "••••••••" : "Não configurado"}
-                  </code>
-                </div>
-                <div>
-                  <span className="font-medium">Access Token:</span>{" "}
-                  <code className="bg-muted px-2 py-1 rounded">
-                    {waba.access_token ? "••••••••" : "Não configurado"}
-                  </code>
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">
+                    As credenciais estão armazenadas de forma segura. Use "Editar" para atualizar.
+                  </p>
                 </div>
               </div>
             )}
@@ -311,7 +347,7 @@ export default function ClientCredentialsForm({
                 <Label htmlFor="new-name">Nome da WABA <span className="text-destructive">*</span></Label>
                 <Input
                   id="new-name"
-                  value={newWaba.name || ""}
+                  value={newWaba.name}
                   onChange={(e) => setNewWaba({ ...newWaba, name: e.target.value })}
                   placeholder="Nome identificador"
                 />
@@ -320,33 +356,25 @@ export default function ClientCredentialsForm({
                 <Label htmlFor="new-waba-id">WABA ID <span className="text-destructive">*</span></Label>
                 <Input
                   id="new-waba-id"
-                  value={newWaba.waba_id || ""}
+                  value={newWaba.waba_id}
                   onChange={(e) => setNewWaba({ ...newWaba, waba_id: e.target.value })}
                   placeholder="1234567890123456"
                 />
               </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-business-id">Meta Business ID</Label>
-                  <Input
-                    id="new-business-id"
-                    value={newWaba.meta_business_id || ""}
-                    onChange={(e) => setNewWaba({ ...newWaba, meta_business_id: e.target.value })}
-                    placeholder="1234567890123456"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-app-id">App ID</Label>
-                  <Input
-                    id="new-app-id"
-                    value={newWaba.app_id || ""}
-                    onChange={(e) => setNewWaba({ ...newWaba, app_id: e.target.value })}
-                    placeholder="1234567890123456"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-business-id">Meta Business ID</Label>
+                <Input
+                  id="new-business-id"
+                  value={newWaba.meta_business_id}
+                  onChange={(e) => setNewWaba({ ...newWaba, meta_business_id: e.target.value })}
+                  placeholder="1234567890123456"
+                />
+              </div>
+              <div /> {/* Empty div for grid alignment */}
               {renderTokenField(
                 "new",
                 "verify_token",
-                newWaba.verify_token || "",
+                newWaba.verify_token,
                 (value) => setNewWaba({ ...newWaba, verify_token: value }),
                 "Verify Token",
                 "Seu_verify_token_customizado",
@@ -355,7 +383,7 @@ export default function ClientCredentialsForm({
               {renderTokenField(
                 "new",
                 "app_secret",
-                newWaba.app_secret || "",
+                newWaba.app_secret,
                 (value) => setNewWaba({ ...newWaba, app_secret: value }),
                 "App Secret",
                 "a1b2c3d4e5f6..."
@@ -363,14 +391,13 @@ export default function ClientCredentialsForm({
               {renderTokenField(
                 "new",
                 "access_token",
-                newWaba.access_token || "",
+                newWaba.access_token,
                 (value) => setNewWaba({ ...newWaba, access_token: value }),
                 "Access Token",
                 "EAAxxxxxxxxxxxxxxx"
               )}
             </div>
-            <Separator />
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setShowNewForm(false)}>
                 Cancelar
               </Button>
@@ -389,7 +416,7 @@ export default function ClientCredentialsForm({
           Configure o webhook no Meta Developer Console com a URL:
         </p>
         <code className="bg-background px-3 py-2 rounded text-sm block">
-          https://ehqspernqapvxiijjkuk.supabase.co/functions/v1/webhooks-whatsapp
+          https://ehqspernqapvxiijjkuk.supabase.co/functions/v1/webhook-meta
         </code>
         <p className="text-xs text-muted-foreground mt-2">
           Use o <strong>Verify Token</strong> específico de cada WABA na configuração do webhook no Facebook.

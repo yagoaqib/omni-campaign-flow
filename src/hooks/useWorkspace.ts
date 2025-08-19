@@ -3,12 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
 type Workspace = Database["public"]["Tables"]["workspaces"]["Row"];
-type WABA = Database["public"]["Tables"]["wabas"]["Row"];
+type WABAFull = Database["public"]["Tables"]["wabas"]["Row"];
+type WABAPublic = Pick<
+  Database["public"]["Tables"]["wabas"]["Row"], 
+  "id" | "name" | "waba_id" | "meta_business_id" | "workspace_id" | "created_at"
+>;
+
+// Export types for use in other components
+export type { WABAFull, WABAPublic };
 
 export function useWorkspace() {
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [wabas, setWabas] = useState<WABA[]>([]);
+  const [wabas, setWabas] = useState<WABAPublic[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadWorkspaces = useCallback(async () => {
@@ -40,7 +47,7 @@ export function useWorkspace() {
     try {
       const { data, error } = await supabase
         .from("wabas")
-        .select("*")
+        .select("id, name, waba_id, meta_business_id, workspace_id, created_at")
         .eq("workspace_id", workspaceId)
         .order("name");
 
@@ -56,7 +63,7 @@ export function useWorkspace() {
     await loadWabas(workspace.id);
   }, [loadWabas]);
 
-  const updateWaba = useCallback(async (waba: WABA) => {
+  const updateWaba = useCallback(async (waba: WABAFull) => {
     try {
       const { error } = await supabase
         .from("wabas")
@@ -83,7 +90,7 @@ export function useWorkspace() {
     }
   }, [activeWorkspace, loadWabas]);
 
-  const createWaba = useCallback(async (wabaData: Partial<WABA>) => {
+  const createWaba = useCallback(async (wabaData: Partial<WABAFull>) => {
     if (!activeWorkspace) return false;
 
     try {
