@@ -11,10 +11,12 @@ import { useUserProfile } from "@/hooks/useUserProfile"
 import { useWorkspace } from "@/hooks/useWorkspace"
 import { useToast } from "@/hooks/use-toast"
 import { processAndUploadAvatar } from "@/lib/imageUtils"
+import { safeValidate, emailSchema, phoneNumberSchema } from "@/lib/validation"
+import { supabase } from "@/integrations/supabase/client"
 
 const ProfileSettings = () => {
   const { activeWorkspace, loadWorkspaces } = useWorkspace()
-  const { profile, loading, loadProfile, updateProfile, getInitials } = useUserProfile()
+  const { profile, loading, loadProfile, updateProfile, uploadAvatar, getInitials } = useUserProfile()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
@@ -87,7 +89,37 @@ const ProfileSettings = () => {
     }
 
     console.log("Attempting to save profile:", { profile, formData });
-    const success = await updateProfile(formData);
+    
+    // Validate inputs
+    let validatedData: any = { name: formData.name };
+    
+    if (formData.email) {
+      const emailValidation = safeValidate(emailSchema, formData.email);
+      if (!emailValidation.success) {
+        toast({
+          title: "Erro de validação",
+          description: `Email inválido: ${emailValidation.error}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      validatedData.email = emailValidation.data;
+    }
+
+    if (formData.phone) {
+      const phoneValidation = safeValidate(phoneNumberSchema, formData.phone);
+      if (!phoneValidation.success) {
+        toast({
+          title: "Erro de validação",
+          description: `Telefone inválido: ${phoneValidation.error}`,
+          variant: "destructive"
+        });
+        return;
+      }
+      validatedData.phone = phoneValidation.data;
+    }
+    
+    const success = await updateProfile(validatedData);
     
     if (success) {
       toast({
@@ -129,29 +161,34 @@ const ProfileSettings = () => {
 
     setUploading(true)
     try {
-      const avatarUrl = await processAndUploadAvatar(file, activeWorkspace.id, removeBackground)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const avatarUrl = await uploadAvatar(file, user.id);
       
-      // Ensure profile is loaded before updating avatar
-      if (!profile && activeWorkspace?.id) {
-        await loadProfile(activeWorkspace.id)
-      }
-      
-      const success = await updateProfile({ avatar_url: avatarUrl })
-      
-      if (success) {
-        setFormData(prev => ({ ...prev, avatar_url: avatarUrl }))
-        toast({
-          title: "Foto atualizada",
-          description: removeBackground 
-            ? "Sua foto foi carregada e o fundo foi removido automaticamente!" 
-            : "Sua foto de perfil foi atualizada com sucesso!",
-        })
-      } else {
-        toast({
-          title: "Erro",
-          description: "Não foi possível atualizar a foto de perfil.",
-          variant: "destructive",
-        })
+      if (avatarUrl) {
+        // Ensure profile is loaded before updating avatar
+        if (!profile && activeWorkspace?.id) {
+          await loadProfile(activeWorkspace.id)
+        }
+        
+        const success = await updateProfile({ avatar_url: avatarUrl })
+        
+        if (success) {
+          setFormData(prev => ({ ...prev, avatar_url: avatarUrl }))
+          toast({
+            title: "Foto atualizada",
+            description: removeBackground 
+              ? "Sua foto foi carregada e o fundo foi removido automaticamente!" 
+              : "Sua foto de perfil foi atualizada com sucesso!",
+          })
+        } else {
+          toast({
+            title: "Erro",
+            description: "Não foi possível atualizar a foto de perfil.",
+            variant: "destructive",
+          })
+        }
       }
     } catch (error) {
       console.error('Upload error:', error)

@@ -1,12 +1,14 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { useToast } from "@/hooks/use-toast";
 
 type UserProfile = Database["public"]["Tables"]["user_profiles"]["Row"];
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   const loadProfile = useCallback(async (workspaceId: string) => {
     if (!workspaceId) {
@@ -89,6 +91,43 @@ export function useUserProfile() {
     }
   }, [profile]);
 
+  const uploadAvatar = useCallback(async (file: File, userId: string): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/avatar.${fileExt}`;
+
+      // Delete existing avatar if it exists
+      await supabase.storage
+        .from('avatars')
+        .remove([fileName]);
+
+      // Upload new avatar
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error("Failed to upload avatar:", error);
+      toast({
+        title: "Erro",
+        description: "Falha ao fazer upload do avatar",
+        variant: "destructive"
+      });
+      return null;
+    }
+  }, [toast]);
+
   const getInitials = useCallback((name: string) => {
     return name
       .split(" ")
@@ -103,6 +142,7 @@ export function useUserProfile() {
     loading,
     loadProfile,
     updateProfile,
+    uploadAvatar,
     getInitials,
   };
 }

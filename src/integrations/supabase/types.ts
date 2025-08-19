@@ -1182,6 +1182,17 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      get_user_profile: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          id: string
+          name: string
+          phone: string
+          workspace_id: string
+        }[]
+      }
       get_waba_credentials: {
         Args: { p_waba_id?: string; p_workspace_id: string }
         Returns: {
@@ -1224,6 +1235,16 @@ export type Database = {
       setup_first_user_workspace: {
         Args: Record<PropertyKey, never> | { p_name?: string }
         Returns: string
+      }
+      update_user_profile: {
+        Args: {
+          p_avatar_url?: string
+          p_email?: string
+          p_name?: string
+          p_phone?: string
+          p_workspace_id: string
+        }
+        Returns: boolean
       }
       update_waba_credentials: {
         Args: {
