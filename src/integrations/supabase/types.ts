@@ -934,34 +934,43 @@ export type Database = {
       wabas: {
         Row: {
           access_token: string | null
+          access_token_enc: string | null
           app_secret: string | null
+          app_secret_enc: string | null
           created_at: string | null
           id: string
           meta_business_id: string
           name: string | null
           verify_token: string | null
+          verify_token_enc: string | null
           waba_id: string
           workspace_id: string
         }
         Insert: {
           access_token?: string | null
+          access_token_enc?: string | null
           app_secret?: string | null
+          app_secret_enc?: string | null
           created_at?: string | null
           id?: string
           meta_business_id: string
           name?: string | null
           verify_token?: string | null
+          verify_token_enc?: string | null
           waba_id: string
           workspace_id: string
         }
         Update: {
           access_token?: string | null
+          access_token_enc?: string | null
           app_secret?: string | null
+          app_secret_enc?: string | null
           created_at?: string | null
           id?: string
           meta_business_id?: string
           name?: string | null
           verify_token?: string | null
+          verify_token_enc?: string | null
           waba_id?: string
           workspace_id?: string
         }
