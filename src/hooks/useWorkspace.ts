@@ -56,7 +56,7 @@ export function useWorkspace() {
   const loadWabas = useCallback(async (workspaceId: string) => {
     try {
       const { data, error } = await supabase
-        .from("wabas")
+        .from("wabas_public")
         .select("id, name, waba_id, meta_business_id, workspace_id, created_at")
         .eq("workspace_id", workspaceId)
         .order("name");
