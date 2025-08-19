@@ -44,7 +44,7 @@ export function useReportsData() {
           status,
           created_at,
           audiences(total),
-          dispatch_jobs(status)
+          dispatch_jobs(status, sent_at, last_status_at)
         `)
         .eq('workspace_id', activeWorkspace.id)
         .order('created_at', { ascending: false });
@@ -83,22 +83,39 @@ export function useReportsData() {
 
       setCampaigns(campaignReports);
 
-      // Collect all dispatch jobs from all campaigns
-      const allJobs = (campaignsData || []).flatMap(campaign => campaign.dispatch_jobs || []);
-      
-      // Generate simple hourly statistics (placeholder until we have proper timestamps)
+      // Generate real hourly statistics from dispatch jobs timestamps
       const hourlyStatsArray = [];
       const now = new Date();
       
-      // Create 24 hours of sample data based on job counts
+      // Create 24 hours of real data based on actual timestamps
       for (let i = 23; i >= 0; i--) {
-        const hour = new Date(now.getTime() - i * 60 * 60 * 1000);
-        const hourKey = hour.toTimeString().substring(0, 5);
+        const hourStart = new Date(now.getTime() - i * 60 * 60 * 1000);
+        const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000);
+        const hourKey = hourStart.toTimeString().substring(0, 5);
         
-        // Distribute jobs across hours as sample data
-        const totalJobs = allJobs.length;
-        const delivered = Math.floor(totalJobs * Math.random() * 0.1);
-        const read = Math.floor(delivered * 0.8);
+        // Count actual delivered and read messages for this hour
+        let delivered = 0;
+        let read = 0;
+        
+        (campaignsData || []).forEach(campaign => {
+          (campaign.dispatch_jobs || []).forEach(job => {
+            // Count delivered messages
+            if (job.status === 'DELIVERED' || job.status === 'READ') {
+              const sentTime = job.sent_at ? new Date(job.sent_at) : null;
+              if (sentTime && sentTime >= hourStart && sentTime < hourEnd) {
+                delivered++;
+              }
+            }
+            
+            // Count read messages  
+            if (job.status === 'READ') {
+              const readTime = job.last_status_at ? new Date(job.last_status_at) : null;
+              if (readTime && readTime >= hourStart && readTime < hourEnd) {
+                read++;
+              }
+            }
+          });
+        });
         
         hourlyStatsArray.push({
           hour: hourKey,

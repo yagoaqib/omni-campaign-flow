@@ -4,70 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Zap, TrendingUp, AlertTriangle, RefreshCw } from "lucide-react";
 import MessageRateGauge from "./MessageRateGauge";
-import { useAvailableNumbers, type AvailableNumber } from "@/hooks/useAvailableNumbers";
-
-interface NumberPerformance {
-  id: string;
-  label: string;
-  quality: 'HIGH' | 'MEDIUM' | 'LOW';
-  status: 'ACTIVE' | 'PAUSED' | 'BLOCKED';
-  displayNumber: string;
-  mpsTarget: number;
-  messagesPerSecond: number;
-  totalSent: number;
-  lastUpdated: string;
-}
+import { useRealTimePerformance } from "@/hooks/useRealTimePerformance";
 
 export default function NumbersPerformancePanel() {
-  const { numbers: availableNumbers } = useAvailableNumbers();
-  const [performances, setPerformances] = React.useState<NumberPerformance[]>([]);
-  const [isMonitoring, setIsMonitoring] = React.useState(false);
-
-  // Simulate real-time data updates
-  React.useEffect(() => {
-    if (!isMonitoring) {
-      setPerformances([]);
-      return;
-    }
-
-    // Initialize with available numbers
-    const initPerformances = availableNumbers.map(num => ({
-      ...num,
-      messagesPerSecond: 0,
-      totalSent: 0,
-      lastUpdated: new Date().toISOString()
-    }));
-    setPerformances(initPerformances);
-
-    // Simulate message rate updates
-    const interval = setInterval(() => {
-      setPerformances(prev => prev.map(perf => {
-        const baseRate = perf.quality === "HIGH" ? 8 : perf.quality === "MEDIUM" ? 5 : 2;
-        const variance = Math.random() * 2 - 1; // -1 to +1
-        const newRate = Math.max(0, baseRate + variance + (Math.random() * 3));
-        
-        return {
-          ...perf,
-          messagesPerSecond: perf.status === "ACTIVE" ? newRate : 0,
-          totalSent: perf.totalSent + (perf.status === "ACTIVE" ? newRate : 0),
-          lastUpdated: new Date().toISOString()
-        };
-      }));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isMonitoring]);
-
-  const totalRate = performances.reduce((sum, p) => sum + p.messagesPerSecond, 0);
-  const activeNumbers = performances.filter(p => p.status === "ACTIVE").length;
-  const bestPerformer = performances.reduce((best, current) => 
-    current.messagesPerSecond > best.messagesPerSecond ? current : best, 
-    performances[0] || { messagesPerSecond: 0, label: "N/A" }
-  );
-
-  const toggleMonitoring = () => {
-    setIsMonitoring(!isMonitoring);
-  };
+  const {
+    performances,
+    isMonitoring,
+    loading,
+    toggleMonitoring,
+    totalRate,
+    activeNumbers,
+    bestPerformer
+  } = useRealTimePerformance();
 
   return (
     <div className="space-y-6">
@@ -91,9 +39,10 @@ export default function NumbersPerformancePanel() {
               onClick={toggleMonitoring}
               variant={isMonitoring ? "destructive" : "default"}
               className="gap-2"
+              disabled={loading}
             >
-              <RefreshCw className={`w-4 h-4 ${isMonitoring ? "animate-spin" : ""}`} />
-              {isMonitoring ? "Parar monitoramento" : "Iniciar monitoramento"}
+              <RefreshCw className={`w-4 h-4 ${isMonitoring || loading ? "animate-spin" : ""}`} />
+              {loading ? "Carregando..." : isMonitoring ? "Parar monitoramento" : "Iniciar monitoramento"}
             </Button>
           </div>
 
