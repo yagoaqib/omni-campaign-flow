@@ -42,44 +42,9 @@ async function validatePhoneNumber(phone: string, workspace_id: string): Promise
       };
     }
 
-    // Step 2: Landline detection
-    const isLandline = ['2', '3', '4', '5'].includes(cleanPhone.charAt(2));
-    if (isLandline) {
-      return {
-        isValid: true,
-        hasWhatsApp: false,
-        isLandline: true,
-        reason: 'landline',
-        description: 'Número de linha fixa não possui WhatsApp',
-        cost: 0.02
-      };
-    }
-
-    // Step 3: Mobile number validation with ninth digit
-    const isMobile = ['6', '7', '8', '9'].includes(cleanPhone.charAt(2));
-    if (!isMobile) {
-      return {
-        isValid: false,
-        hasWhatsApp: false,
-        isLandline: false,
-        reason: 'invalid_format',
-        description: 'Número não é móvel nem fixo',
-        cost: 0.001
-      };
-    }
-
-    // Check for ninth digit requirement
-    const hasNinthDigit = cleanPhone.length === 11 && cleanPhone.charAt(2) === '9';
-    if (cleanPhone.length === 11 && !hasNinthDigit) {
-      return {
-        isValid: false,
-        hasWhatsApp: false,
-        isLandline: false,
-        reason: 'invalid_format',
-        description: 'Número móvel sem o nono dígito obrigatório',
-        cost: 0.001
-      };
-    }
+    // Skip landline/mobile heuristics and ninth digit checks
+    // Accept numbers with basic length validation; delivery failures will be handled during dispatch
+    // isLandline is not determined at this stage
 
     // Step 4: Check for duplicates in the same workspace
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
