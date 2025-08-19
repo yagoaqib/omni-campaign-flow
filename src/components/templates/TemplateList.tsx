@@ -43,34 +43,50 @@ export default function TemplateList({ templates, onEdit, onSync, loadTemplates 
       if (!template) return;
 
       // Get phone numbers for this workspace
-      const { data: phoneNumbers } = await supabase
+      const { data: phoneNumbers, error: phoneError } = await supabase
         .from('phone_numbers')
-        .select('id, display_number')
-        .eq('workspace_id', 'workspace-id'); // TODO: get from context
+        .select('id, display_number, workspace_id')
+        .eq('status', 'ACTIVE');
+
+      if (phoneError) throw phoneError;
 
       if (!phoneNumbers || phoneNumbers.length === 0) {
-        toast.error("Nenhum número encontrado para sincronização");
+        toast.error("Nenhum número ativo encontrado para sincronização");
         return;
       }
 
-      // Sync for each phone number
-      for (const phoneNumber of phoneNumbers) {
-        const response = await supabase.functions.invoke('sync-template-statuses', {
-          body: { 
-            phoneNumberId: phoneNumber.id,
-            workspaceId: 'default' // TODO: get from context
-          }
-        });
+      // Get workspace ID from the first phone number (they should all be from same workspace)
+      const workspaceId = phoneNumbers[0].workspace_id;
 
-        if (response.error) {
-          console.error('Sync error for phone:', phoneNumber.display_number, response.error);
+      // Sync for each phone number
+      let successCount = 0;
+      for (const phoneNumber of phoneNumbers) {
+        try {
+          const response = await supabase.functions.invoke('sync-template-statuses', {
+            body: { 
+              phoneNumberId: phoneNumber.id,
+              workspaceId: workspaceId
+            }
+          });
+
+          if (!response.error) {
+            successCount++;
+          } else {
+            console.error('Sync error for phone:', phoneNumber.display_number, response.error);
+          }
+        } catch (err) {
+          console.error('Error syncing phone:', phoneNumber.display_number, err);
         }
       }
 
       // Reload templates to show updated statuses
       await loadTemplates();
       
-      toast.success("Templates sincronizados com sucesso");
+      if (successCount > 0) {
+        toast.success(`Templates sincronizados com sucesso para ${successCount} número(s)`);
+      } else {
+        toast.error("Falha ao sincronizar templates");
+      }
       
     } catch (error) {
       console.error('Error syncing templates:', error);

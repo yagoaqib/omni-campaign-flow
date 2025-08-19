@@ -20,40 +20,58 @@ export function useTemplates() {
 
       if (error) throw error;
 
-      // Convert message_templates data to TemplateModel format with proper schema parsing
-      const convertedTemplates: TemplateModel[] = (data || []).map(template => {
-        const schema = (template.components_schema as any[]) || [];
-        
-        // Extract components from schema array
-        const headerComponent = schema.find(c => c.type === 'HEADER');
-        const bodyComponent = schema.find(c => c.type === 'BODY');
-        const footerComponent = schema.find(c => c.type === 'FOOTER');
-        const buttonsComponent = schema.find(c => c.type === 'BUTTONS');
-        
-        // For now, we'll fetch statuses separately when needed
-        const wabaStatuses: any[] = [];
+      // Convert message_templates data to TemplateModel format with real status data
+      const convertedTemplates: TemplateModel[] = await Promise.all(
+        (data || []).map(async (template) => {
+          const schema = (template.components_schema as any[]) || [];
+          
+          // Extract components from schema array
+          const headerComponent = schema.find(c => c.type === 'HEADER');
+          const bodyComponent = schema.find(c => c.type === 'BODY');
+          const footerComponent = schema.find(c => c.type === 'FOOTER');
+          const buttonsComponent = schema.find(c => c.type === 'BUTTONS');
+          
+          // Get real WABA statuses from template_statuses table
+          const { data: statusData } = await supabase
+            .from('template_statuses')
+            .select(`
+              status,
+              review_reason,
+              phone_number_ref,
+              phone_numbers!inner(display_number)
+            `)
+            .eq('template_id', template.id);
 
-        return {
-          id: template.id,
-          name: template.name,
-          language: template.language,
-          category: template.category as any,
-          headerType: headerComponent?.format || "NONE",
-          headerText: headerComponent?.text,
-          body: bodyComponent?.text || "",
-          footer: footerComponent?.text,
-          buttons: buttonsComponent?.buttons?.map((btn: any) => ({
-            id: crypto.randomUUID(),
-            type: btn.type,
-            text: btn.text,
-            url: btn.url,
-            phone: btn.phone_number
-          })) || [],
-          createdAt: template.created_at,
-          updatedAt: template.updated_at,
-          wabaStatuses
-        };
-      });
+          const wabaStatuses = (statusData || []).map((status: any) => ({
+            wabaId: status.phone_number_ref,
+            phoneName: status.phone_numbers?.display_number || 'Número desconhecido',
+            status: status.status,
+            lastSyncAt: new Date().toISOString(),
+            reviewReason: status.review_reason
+          }));
+
+          return {
+            id: template.id,
+            name: template.name,
+            language: template.language,
+            category: template.category as any,
+            headerType: headerComponent?.format || "NONE",
+            headerText: headerComponent?.text,
+            body: bodyComponent?.text || "",
+            footer: footerComponent?.text,
+            buttons: buttonsComponent?.buttons?.map((btn: any) => ({
+              id: crypto.randomUUID(),
+              type: btn.type,
+              text: btn.text,
+              url: btn.url,
+              phone: btn.phone_number
+            })) || [],
+            createdAt: template.created_at,
+            updatedAt: template.updated_at,
+            wabaStatuses
+          };
+        })
+      );
 
       setTemplates(convertedTemplates);
     } catch (error) {
