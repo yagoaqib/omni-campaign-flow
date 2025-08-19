@@ -125,6 +125,35 @@ export function useWorkspace() {
     }
   }, [loadWorkspaces]);
 
+  const deleteWorkspace = useCallback(async (workspaceId: string) => {
+    try {
+      const { error } = await supabase
+        .from("workspaces")
+        .delete()
+        .eq("id", workspaceId);
+
+      if (error) throw error;
+      
+      // If we deleted the active workspace, switch to first available
+      if (activeWorkspace?.id === workspaceId) {
+        await loadWorkspaces();
+        const remainingWorkspaces = workspaces.filter(w => w.id !== workspaceId);
+        if (remainingWorkspaces.length > 0) {
+          setActiveWorkspace(remainingWorkspaces[0]);
+        } else {
+          setActiveWorkspace(null);
+        }
+      } else {
+        await loadWorkspaces();
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Failed to delete workspace:", error);
+      return false;
+    }
+  }, [activeWorkspace, workspaces, loadWorkspaces]);
+
   return {
     activeWorkspace,
     workspaces,
@@ -136,5 +165,6 @@ export function useWorkspace() {
     updateWaba,
     createWaba,
     createWorkspace,
+    deleteWorkspace,
   };
 }

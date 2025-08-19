@@ -7,10 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useState } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { Pencil, Check, X } from "lucide-react"
+import { Pencil, Check, X, Trash2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const Admin = () => {
-  const { activeWorkspace, wabas, workspaces, loadWorkspaces, updateWaba, createWaba } = useWorkspace();
+  const { activeWorkspace, wabas, workspaces, loadWorkspaces, updateWaba, createWaba, deleteWorkspace } = useWorkspace();
   const [editingWorkspace, setEditingWorkspace] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const { toast } = useToast();
@@ -41,6 +52,22 @@ const Admin = () => {
       toast({
         title: "Erro",
         description: "Não foi possível atualizar o workspace.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteWorkspace = async (workspaceId: string, workspaceName: string) => {
+    const success = await deleteWorkspace(workspaceId);
+    if (success) {
+      toast({
+        title: "Workspace excluído",
+        description: `Workspace "${workspaceName}" foi excluído com sucesso.`,
+      });
+    } else {
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o workspace.",
         variant: "destructive",
       });
     }
@@ -96,13 +123,44 @@ const Admin = () => {
                   ) : (
                     <div className="flex items-center justify-between flex-1">
                       <span className="font-medium">{workspace.name}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEditWorkspace(workspace.id, workspace.name)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditWorkspace(workspace.id, workspace.name)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir Workspace</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir o workspace "{workspace.name}"? 
+                                Esta ação não pode ser desfeita e todos os dados relacionados serão perdidos.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteWorkspace(workspace.id, workspace.name)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   )}
                 </div>
