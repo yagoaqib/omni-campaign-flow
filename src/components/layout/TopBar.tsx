@@ -17,7 +17,7 @@ import { useWorkspace } from "@/hooks/useWorkspace"
 import { useNotifications } from "@/hooks/useNotifications"
 import { useRealTimeMetrics } from "@/hooks/useRealTimeMetrics"
 import { useBalance } from "@/hooks/useBalance"
-import { useToast } from "@/hooks/use-toast"
+// import { useToast } from "@/hooks/use-toast"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import {
@@ -43,7 +43,7 @@ export function TopBar() {
   const { balance, loading: balanceLoading } = useBalance();
   const [showNewWorkspaceDialog, setShowNewWorkspaceDialog] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
-  const { toast } = useToast();
+  // const { toast } = useToast();
   
   useEffect(() => {
     loadWorkspaces();
@@ -54,18 +54,11 @@ export function TopBar() {
     
     const result = await createWorkspace(newWorkspaceName);
     if (result) {
-      toast({
-        title: "Workspace criado",
-        description: `Workspace "${newWorkspaceName}" foi criado com sucesso.`,
-      });
+      console.log("Workspace created successfully:", newWorkspaceName);
       setNewWorkspaceName("");
       setShowNewWorkspaceDialog(false);
     } else {
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar o workspace.",
-        variant: "destructive",
-      });
+      console.error("Failed to create workspace");
     }
   };
 
