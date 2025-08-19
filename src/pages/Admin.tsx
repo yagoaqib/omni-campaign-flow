@@ -4,7 +4,7 @@ import { useWorkspace } from "@/hooks/useWorkspace"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { Pencil, Check, X, Trash2 } from "lucide-react"
@@ -21,10 +21,19 @@ import {
 } from "@/components/ui/alert-dialog"
 
 const Admin = () => {
-  const { activeWorkspace, wabas, workspaces, loadWorkspaces, updateWaba, createWaba, deleteWorkspace } = useWorkspace();
+  const { activeWorkspace, wabas, workspaces, loading, loadWorkspaces, updateWaba, createWaba, deleteWorkspace } = useWorkspace();
   const [editingWorkspace, setEditingWorkspace] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const { toast } = useToast();
+
+  useEffect(() => {
+    console.log("Admin page: Loading workspaces...");
+    loadWorkspaces();
+  }, [loadWorkspaces]);
+
+  useEffect(() => {
+    console.log("Admin page: Workspaces updated:", workspaces);
+  }, [workspaces]);
 
   const handleEditWorkspace = (workspaceId: string, currentName: string) => {
     setEditingWorkspace(workspaceId);
@@ -128,6 +137,7 @@ const Admin = () => {
                           size="sm"
                           variant="ghost"
                           onClick={() => handleEditWorkspace(workspace.id, workspace.name)}
+                          title="Editar workspace"
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -137,6 +147,7 @@ const Admin = () => {
                               size="sm"
                               variant="ghost"
                               className="text-destructive hover:text-destructive"
+                              title="Excluir workspace"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -167,9 +178,17 @@ const Admin = () => {
               ))}
               {workspaces.length === 0 && (
                 <p className="text-muted-foreground text-center py-4">
-                  Nenhum workspace encontrado
+                  {loading ? "Carregando workspaces..." : "Nenhum workspace encontrado"}
                 </p>
               )}
+              <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Debug info:</strong> Total workspaces: {workspaces.length}
+                  {workspaces.length > 0 && (
+                    <span>, Names: {workspaces.map(w => w.name).join(", ")}</span>
+                  )}
+                </p>
+              </div>
             </CardContent>
           </Card>
         </section>
