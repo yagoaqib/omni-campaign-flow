@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye, EyeOff, Save, Plus, Shield, RefreshCw, Phone } from "lucide-react";
+import { Eye, EyeOff, Save, Plus, Shield, RefreshCw, Phone, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { WABAPublic } from "@/hooks/useWorkspace";
@@ -166,6 +166,34 @@ export default function SecureWABAManager({
     }
   };
 
+  const handleDeleteWaba = async (waba: WABAPublic) => {
+    if (!confirm(`Tem certeza que deseja excluir a WABA "${waba.name || waba.waba_id}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('wabas')
+        .delete()
+        .eq('id', waba.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "WABA excluída",
+        description: "A WABA foi removida com sucesso.",
+      });
+      await onUpdate();
+    } catch (error) {
+      console.error('Error deleting WABA:', error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir a WABA. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderTokenField = (
     wabaId: string,
     field: string,
@@ -288,6 +316,16 @@ export default function SecureWABAManager({
                       size="sm"
                     >
                       Editar
+                    </Button>
+                    <Button
+                      onClick={() => handleDeleteWaba(waba)}
+                      variant="destructive"
+                      size="sm"
+                      className="gap-2"
+                      title="Excluir WABA permanentemente"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Excluir
                     </Button>
                   </>
                 )}
