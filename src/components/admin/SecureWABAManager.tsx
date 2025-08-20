@@ -11,6 +11,7 @@ import { WABAPublic } from "@/hooks/useWorkspace";
 
 interface SecureWABAManagerProps {
   workspaceName?: string;
+  workspaceId: string;
   wabas: WABAPublic[];
   onUpdate: () => Promise<void>;
 }
@@ -23,6 +24,7 @@ interface WABACredentials {
 
 export default function SecureWABAManager({
   workspaceName = "Cliente",
+  workspaceId,
   wabas,
   onUpdate,
 }: SecureWABAManagerProps) {
@@ -94,7 +96,7 @@ export default function SecureWABAManager({
 
     try {
       const { error } = await supabase.rpc('create_waba_secure' as any, {
-        p_workspace_id: wabas[0]?.workspace_id, // Use workspace from existing WABAs
+        p_workspace_id: workspaceId,
         p_name: newWaba.name,
         p_meta_business_id: newWaba.meta_business_id,
         p_waba_id: newWaba.waba_id,

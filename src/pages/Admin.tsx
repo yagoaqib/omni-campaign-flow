@@ -210,6 +210,7 @@ const Admin = () => {
             {activeWorkspace && (
               <SecureWABAManager 
                 workspaceName={activeWorkspace.name}
+                workspaceId={activeWorkspace.id}
                 wabas={wabas}
                 onUpdate={async () => {
                   await loadWabas(activeWorkspace.id);
