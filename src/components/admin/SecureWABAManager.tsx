@@ -37,6 +37,8 @@ export default function SecureWABAManager({
     meta_business_id: "",
     waba_id: "",
     verify_token: "",
+    access_token: "",
+    app_secret: "",
   });
   const [showNewForm, setShowNewForm] = useState(false);
   const [syncingNumbers, setSyncingNumbers] = useState<Record<string, boolean>>({});
@@ -94,8 +96,8 @@ export default function SecureWABAManager({
         p_meta_business_id: editingWaba.meta_business_id,
         p_waba_id_text: editingWaba.waba_id,
         p_verify_token: credentials.verify_token,
-        p_app_secret: null,
-        p_access_token: null,
+        p_app_secret: credentials.app_secret,
+        p_access_token: credentials.access_token,
       });
 
       if (error) throw error;
@@ -118,10 +120,10 @@ export default function SecureWABAManager({
   };
 
   const handleCreateWaba = async () => {
-    if (!newWaba.name || !newWaba.waba_id || !newWaba.verify_token) {
+    if (!newWaba.name || !newWaba.waba_id || !newWaba.verify_token || !newWaba.access_token) {
       toast({
         title: "Campos obrigatórios",
-        description: "Nome, WABA ID e Verify Token são obrigatórios.",
+        description: "Nome, WABA ID, Verify Token e Access Token são obrigatórios para importar números.",
         variant: "destructive",
       });
       return;
@@ -134,8 +136,8 @@ export default function SecureWABAManager({
         p_meta_business_id: newWaba.meta_business_id,
         p_waba_id: newWaba.waba_id,
         p_verify_token: newWaba.verify_token,
-        p_app_secret: null,
-        p_access_token: null,
+        p_app_secret: newWaba.app_secret,
+        p_access_token: newWaba.access_token,
       });
 
       if (error) throw error;
@@ -149,6 +151,8 @@ export default function SecureWABAManager({
         meta_business_id: "",
         waba_id: "",
         verify_token: "",
+        access_token: "",
+        app_secret: "",
       });
       setShowNewForm(false);
       await onUpdate();
@@ -224,11 +228,12 @@ export default function SecureWABAManager({
           <div className="flex items-start gap-3">
             <Shield className="h-5 w-5 text-amber-600 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-amber-800">Como usar as credenciais</p>
+              <p className="text-sm font-medium text-amber-800">Como configurar Meta WhatsApp API</p>
               <p className="text-xs text-amber-700 mt-1">
-                1. Configure as credenciais da WABA abaixo<br/>
-                2. Clique em "Importar Números" para sincronizar os números via Meta API<br/>
-                3. Os números aparecerão na seção "Senders" e ficarão disponíveis nos templates
+                1. <strong>Access Token:</strong> Token permanente da sua aplicação Meta<br/>
+                2. <strong>App Secret:</strong> Chave secreta da aplicação (opcional)<br/>
+                3. <strong>Verify Token:</strong> Token personalizado para webhook<br/>
+                4. Após salvar, clique em "Importar Números" para buscar da Meta API
               </p>
             </div>
           </div>
@@ -329,6 +334,24 @@ export default function SecureWABAManager({
                   "Seu_verify_token_customizado",
                   true
                 )}
+                {renderTokenField(
+                  waba.id,
+                  "access_token",
+                  credentials.access_token || "",
+                  (value) => setCredentials({ ...credentials, access_token: value }),
+                  "Access Token",
+                  "Seu_access_token_da_meta",
+                  true
+                )}
+                {renderTokenField(
+                  waba.id,
+                  "app_secret",
+                  credentials.app_secret || "",
+                  (value) => setCredentials({ ...credentials, app_secret: value }),
+                  "App Secret",
+                  "Seu_app_secret_da_meta",
+                  false
+                )}
                 
               </div>
             ) : (
@@ -411,6 +434,24 @@ export default function SecureWABAManager({
                 "Verify Token",
                 "Seu_verify_token_customizado",
                 true
+              )}
+              {renderTokenField(
+                "new",
+                "access_token",
+                newWaba.access_token,
+                (value) => setNewWaba({ ...newWaba, access_token: value }),
+                "Access Token",
+                "Seu_access_token_da_meta",
+                true
+              )}
+              {renderTokenField(
+                "new",
+                "app_secret",
+                newWaba.app_secret,
+                (value) => setNewWaba({ ...newWaba, app_secret: value }),
+                "App Secret",
+                "Seu_app_secret_da_meta",
+                false
               )}
               
             </div>
