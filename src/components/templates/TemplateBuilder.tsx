@@ -276,10 +276,10 @@ const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.
               <div>
                 <Label>Idioma</Label>
                 <Select value={language} onValueChange={(v) => setLanguage(v)}>
-                  <SelectTrigger className="z-50 bg-popover">
+                  <SelectTrigger className="relative z-[50] bg-background border border-input">
                     <SelectValue placeholder="Idioma" />
                   </SelectTrigger>
-                  <SelectContent className="z-50 bg-popover">
+                  <SelectContent className="relative z-[51] bg-popover border border-border shadow-lg">
                     <SelectItem value="pt_BR">Português (Brasil)</SelectItem>
                     <SelectItem value="en_US">English (US)</SelectItem>
                     <SelectItem value="es_ES">Español (ES)</SelectItem>
@@ -289,10 +289,10 @@ const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.
               <div>
                 <Label>Categoria</Label>
                 <Select value={category} onValueChange={(v: any) => setCategory(v)}>
-                  <SelectTrigger className="z-50 bg-popover">
+                  <SelectTrigger className="relative z-[50] bg-background border border-input">
                     <SelectValue placeholder="Categoria" />
                   </SelectTrigger>
-                  <SelectContent className="z-50 bg-popover">
+                  <SelectContent className="relative z-[51] bg-popover border border-border shadow-lg">
                     <SelectItem value="MARKETING">Marketing</SelectItem>
                     <SelectItem value="TRANSACTIONAL">Transacional</SelectItem>
                     <SelectItem value="UTILITY">Utilidade</SelectItem>
@@ -305,13 +305,20 @@ const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.
               <div>
                 <Label>Número/WABA *</Label>
                 <Select value={selectedWabaId} onValueChange={(v) => setSelectedWabaId(v)}>
-                  <SelectTrigger className="z-50 bg-popover">
-                    <SelectValue placeholder="Selecione um número" />
+                  <SelectTrigger className="relative z-[100] bg-background border border-input">
+                    <SelectValue placeholder={wabaOptions.length === 0 ? "Nenhum número disponível" : "Selecione um número"} />
                   </SelectTrigger>
-                  <SelectContent className="z-50 bg-popover">
-                    {wabaOptions.map((waba) => (
-                      <SelectItem key={waba.id} value={waba.id}>{waba.label}</SelectItem>
-                    ))}
+                  <SelectContent className="relative z-[101] bg-popover border border-border shadow-lg">
+                    {wabaOptions.length === 0 ? (
+                      <div className="p-3 text-sm text-muted-foreground">
+                        Nenhum número de telefone encontrado.<br/>
+                        Configure números na seção de Senders.
+                      </div>
+                    ) : (
+                      wabaOptions.map((waba) => (
+                        <SelectItem key={waba.id} value={waba.id}>{waba.label}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -323,10 +330,10 @@ const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.
               <div>
                 <Label>Tipo de Cabeçalho</Label>
                 <Select value={headerType} onValueChange={(v: TemplateHeaderType) => onHeaderTypeChange(v)}>
-                  <SelectTrigger className="z-50 bg-popover">
+                  <SelectTrigger className="relative z-[50] bg-background border border-input">
                     <SelectValue placeholder="Cabeçalho" />
                   </SelectTrigger>
-                  <SelectContent className="z-50 bg-popover">
+                  <SelectContent className="relative z-[51] bg-popover border border-border shadow-lg">
                     <SelectItem value="NONE">Sem Cabeçalho</SelectItem>
                     <SelectItem value="TEXT">Texto</SelectItem>
                     <SelectItem value="IMAGE">Imagem</SelectItem>
@@ -387,8 +394,10 @@ const [assignedNumberId, setAssignedNumberId] = React.useState<string>(initial?.
                   <div key={b.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center rounded-md border p-3">
                     <div className="md:col-span-1">
                       <Select value={b.type} onValueChange={(v: TemplateButtonType) => setButtons((prev) => prev.map(x => x.id === b.id ? { ...x, type: v } : x))}>
-                        <SelectTrigger className="z-50 bg-popover"><SelectValue /></SelectTrigger>
-                        <SelectContent className="z-50 bg-popover">
+                        <SelectTrigger className="relative z-[40] bg-background border border-input">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="relative z-[41] bg-popover border border-border shadow-lg">
                           <SelectItem value="QUICK_REPLY">Quick Reply</SelectItem>
                           <SelectItem value="URL">URL</SelectItem>
                           <SelectItem value="PHONE">Telefone</SelectItem>

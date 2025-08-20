@@ -101,8 +101,10 @@ export default function TemplateList({ templates, onEdit, onSync, loadTemplates 
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">Filtrar por Número/WABA</div>
         <Select value={filterId} onValueChange={setFilterId}>
-          <SelectTrigger className="w-64"><SelectValue placeholder="Todos" /></SelectTrigger>
-          <SelectContent>
+          <SelectTrigger className="w-64 relative z-[50] bg-background border border-input">
+            <SelectValue placeholder="Todos" />
+          </SelectTrigger>
+          <SelectContent className="relative z-[51] bg-popover border border-border shadow-lg">
             <SelectItem value="all">Todos</SelectItem>
             {phoneNumbers.map((n) => (
               <SelectItem key={n.id} value={n.id}>{n.label}</SelectItem>
