@@ -17,3 +17,12 @@ verify_jwt = true
 
 [functions."webhooks-whatsapp"]
 verify_jwt = false
+
+[functions."webhook-meta"]
+verify_jwt = false
+
+[functions."webhook-verify"]
+verify_jwt = false
+
+[functions."validate-webhook"]
+verify_jwt = false
