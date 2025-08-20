@@ -35,8 +35,6 @@ export default function SecureWABAManager({
     meta_business_id: "",
     waba_id: "",
     verify_token: "",
-    app_secret: "",
-    access_token: "",
   });
   const [showNewForm, setShowNewForm] = useState(false);
 
@@ -55,15 +53,14 @@ export default function SecureWABAManager({
     if (!editingWaba) return;
 
     try {
-      // Call RPC function to securely update credentials
       const { error } = await supabase.rpc('update_waba_credentials' as any, {
         p_waba_id: editingWaba.id,
         p_name: editingWaba.name,
         p_meta_business_id: editingWaba.meta_business_id,
-        p_waba_id_value: editingWaba.waba_id,
+        p_waba_id_text: editingWaba.waba_id,
         p_verify_token: credentials.verify_token,
-        p_app_secret: credentials.app_secret,
-        p_access_token: credentials.access_token,
+        p_app_secret: null,
+        p_access_token: null,
       });
 
       if (error) throw error;
@@ -96,15 +93,14 @@ export default function SecureWABAManager({
     }
 
     try {
-      // Call RPC function to securely create WABA
       const { error } = await supabase.rpc('create_waba_secure' as any, {
         p_workspace_id: wabas[0]?.workspace_id, // Use workspace from existing WABAs
         p_name: newWaba.name,
         p_meta_business_id: newWaba.meta_business_id,
         p_waba_id: newWaba.waba_id,
         p_verify_token: newWaba.verify_token,
-        p_app_secret: newWaba.app_secret,
-        p_access_token: newWaba.access_token,
+        p_app_secret: null,
+        p_access_token: null,
       });
 
       if (error) throw error;
@@ -118,8 +114,6 @@ export default function SecureWABAManager({
         meta_business_id: "",
         waba_id: "",
         verify_token: "",
-        app_secret: "",
-        access_token: "",
       });
       setShowNewForm(false);
       await onUpdate();
@@ -282,22 +276,7 @@ export default function SecureWABAManager({
                   "Seu_verify_token_customizado",
                   true
                 )}
-                {renderTokenField(
-                  waba.id,
-                  "app_secret",
-                  credentials.app_secret || "",
-                  (value) => setCredentials({ ...credentials, app_secret: value }),
-                  "App Secret",
-                  "a1b2c3d4e5f6...",
-                )}
-                {renderTokenField(
-                  waba.id,
-                  "access_token",
-                  credentials.access_token || "",
-                  (value) => setCredentials({ ...credentials, access_token: value }),
-                  "Access Token",
-                  "EAAxxxxxxxxxxxxxxx"
-                )}
+                
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -380,22 +359,7 @@ export default function SecureWABAManager({
                 "Seu_verify_token_customizado",
                 true
               )}
-              {renderTokenField(
-                "new",
-                "app_secret",
-                newWaba.app_secret,
-                (value) => setNewWaba({ ...newWaba, app_secret: value }),
-                "App Secret",
-                "a1b2c3d4e5f6..."
-              )}
-              {renderTokenField(
-                "new",
-                "access_token",
-                newWaba.access_token,
-                (value) => setNewWaba({ ...newWaba, access_token: value }),
-                "Access Token",
-                "EAAxxxxxxxxxxxxxxx"
-              )}
+              
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setShowNewForm(false)}>

@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
             .eq('id', fullJob.template_ref)
             .single();
 
-          // Get WABA details
+          // Get WABA details (only waba_id; token comes from env)
           const { data: phoneNumber } = await supabase
             .from('phone_numbers')
             .select('phone_number_id, waba_ref')
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
 
           const { data: waba } = await supabase
             .from('wabas')
-            .select('access_token')
+            .select('waba_id')
             .eq('id', phoneNumber.waba_ref)
             .single();
 
@@ -170,10 +170,13 @@ Deno.serve(async (req) => {
             }
           };
 
+          const accessToken = Deno.env.get(`WABA_${waba.waba_id}_ACCESS_TOKEN`) || Deno.env.get('META_ACCESS_TOKEN');
+          if (!accessToken) throw new Error('Missing META access token in env');
+
           const metaResponse = await fetch(`https://graph.facebook.com/v19.0/${phoneNumber.phone_number_id}/messages`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${waba.access_token}`,
+              'Authorization': `Bearer ${accessToken}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify(messagePayload)

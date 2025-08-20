@@ -67,10 +67,10 @@ Deno.serve(async (req) => {
       throw new Error('Phone number not found');
     }
 
-    // Get WABA access token
+    // Get WABA id (token comes from env)
     const { data: waba, error: wabaError } = await supabase
       .from('wabas')
-      .select('access_token, waba_id')
+      .select('waba_id')
       .eq('id', phoneNumber.waba_ref)
       .single();
 
@@ -78,8 +78,10 @@ Deno.serve(async (req) => {
       throw new Error('WABA not found');
     }
 
-    // Fetch templates from Meta API
-    const metaTemplates = await fetchTemplatesFromMeta(waba.access_token, waba.waba_id);
+    // Fetch templates from Meta API using env token
+    const accessToken = Deno.env.get(`WABA_${waba.waba_id}_ACCESS_TOKEN`) || Deno.env.get('META_ACCESS_TOKEN');
+    if (!accessToken) throw new Error('Missing META access token in env');
+    const metaTemplates = await fetchTemplatesFromMeta(accessToken, waba.waba_id);
 
     // Get existing templates from our database
     const { data: existingTemplates } = await supabase

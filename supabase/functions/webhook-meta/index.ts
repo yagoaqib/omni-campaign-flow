@@ -63,26 +63,28 @@ Deno.serve(async (req) => {
       }
 
       const data = JSON.parse(payload);
-      
-      // Find the WABA that owns this webhook
-      let validWaba = null;
-      const { data: wabas } = await supabase
-        .from('wabas')
-        .select('app_secret, workspace_id');
-
-      for (const waba of wabas || []) {
-        if (verifyWebhookSignature(payload, signature, waba.app_secret)) {
-          validWaba = waba;
-          break;
-        }
+      // Determine WABA id from payload entries (WhatsApp Business Account ID)
+      const wabaId = (data.entry && data.entry[0] && data.entry[0].id) || null;
+      const appSecret = (wabaId && Deno.env.get(`WABA_${wabaId}_APP_SECRET`)) || Deno.env.get('META_APP_SECRET');
+      if (!appSecret) {
+        return new Response('Missing app secret', { status: 500, headers: { 'Content-Type': 'text/plain', ...corsHeaders } });
       }
 
-      if (!validWaba) {
+      // Verify signature using env secret
+      if (!verifyWebhookSignature(payload, signature, appSecret)) {
         return new Response('Invalid signature', { 
           status: 403,
           headers: { 'Content-Type': 'text/plain', ...corsHeaders }
         });
       }
+
+      // Load workspace_id for this WABA (non-sensitive)
+      const { data: wabaMeta } = await supabase
+        .from('wabas')
+        .select('workspace_id')
+        .eq('waba_id', wabaId)
+        .single();
+      const validWaba = { workspace_id: wabaMeta?.workspace_id };
 
       // Process webhook events
       for (const entry of data.entry || []) {
