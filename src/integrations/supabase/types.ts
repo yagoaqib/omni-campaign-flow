@@ -1104,6 +1104,7 @@ export type Database = {
           id: string | null
           meta_business_id: string | null
           name: string | null
+          verify_token: string | null
           waba_id: string | null
           workspace_id: string | null
         }
@@ -1112,6 +1113,7 @@ export type Database = {
           id?: string | null
           meta_business_id?: string | null
           name?: string | null
+          verify_token?: string | null
           waba_id?: string | null
           workspace_id?: string | null
         }
@@ -1120,6 +1122,7 @@ export type Database = {
           id?: string | null
           meta_business_id?: string | null
           name?: string | null
+          verify_token?: string | null
           waba_id?: string | null
           workspace_id?: string | null
         }
