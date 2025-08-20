@@ -12,5 +12,8 @@ verify_jwt = false
 [functions.dispatcher]
 verify_jwt = false
 
+[functions."sync-phone-numbers"]
+verify_jwt = true
+
 [functions."webhooks-whatsapp"]
 verify_jwt = false

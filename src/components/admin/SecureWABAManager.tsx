@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye, EyeOff, Save, Plus, Shield } from "lucide-react";
+import { Eye, EyeOff, Save, Plus, Shield, RefreshCw, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { WABAPublic } from "@/hooks/useWorkspace";
@@ -39,6 +39,39 @@ export default function SecureWABAManager({
     verify_token: "",
   });
   const [showNewForm, setShowNewForm] = useState(false);
+  const [syncingNumbers, setSyncingNumbers] = useState<Record<string, boolean>>({});
+
+  const syncPhoneNumbers = async (waba: WABAPublic) => {
+    setSyncingNumbers(prev => ({ ...prev, [waba.id]: true }));
+    
+    try {
+      // Call edge function to sync phone numbers from Meta API
+      const { data, error } = await supabase.functions.invoke('sync-phone-numbers', {
+        body: {
+          wabaId: waba.id,
+          workspaceId: waba.workspace_id
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Números sincronizados",
+        description: data?.message || "Números importados da Meta API com sucesso.",
+      });
+
+      await onUpdate(); // Refresh the WABA list
+    } catch (error) {
+      console.error('Error syncing phone numbers:', error);
+      toast({
+        title: "Erro na sincronização",
+        description: "Não foi possível importar os números. Verifique as credenciais da WABA.",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncingNumbers(prev => ({ ...prev, [waba.id]: false }));
+    }
+  };
 
   useEffect(() => {
     if (wabas.length === 0) {
@@ -191,10 +224,11 @@ export default function SecureWABAManager({
           <div className="flex items-start gap-3">
             <Shield className="h-5 w-5 text-amber-600 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-amber-800">Credenciais Protegidas</p>
+              <p className="text-sm font-medium text-amber-800">Como usar as credenciais</p>
               <p className="text-xs text-amber-700 mt-1">
-                As credenciais sensíveis (tokens, secrets) são armazenadas de forma segura e não são expostas na interface.
-                Apenas administradores podem atualizar essas informações.
+                1. Configure as credenciais da WABA abaixo<br/>
+                2. Clique em "Importar Números" para sincronizar os números via Meta API<br/>
+                3. Os números aparecerão na seção "Senders" e ficarão disponíveis nos templates
               </p>
             </div>
           </div>
@@ -227,13 +261,30 @@ export default function SecureWABAManager({
                     Salvar
                   </Button>
                 ) : (
-                  <Button
-                    onClick={() => setEditingWaba(waba)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Editar
-                  </Button>
+                  <>
+                    <Button
+                      onClick={() => syncPhoneNumbers(waba)}
+                      variant="secondary"
+                      size="sm"
+                      disabled={syncingNumbers[waba.id]}
+                      className="gap-2"
+                      title="Importar números da Meta API"
+                    >
+                      {syncingNumbers[waba.id] ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Phone className="w-4 h-4" />
+                      )}
+                      {syncingNumbers[waba.id] ? 'Importando...' : 'Importar Números'}
+                    </Button>
+                    <Button
+                      onClick={() => setEditingWaba(waba)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Editar
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
